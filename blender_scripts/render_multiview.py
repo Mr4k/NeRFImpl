@@ -6,6 +6,9 @@ from mathutils import Vector
 import math
 import json
 
+import cv2
+import numpy as np
+
 # Set the output directory for the rendered images
 output_dir = "/Users/peterstefek/workspace/NeRF/data/cube"
 
@@ -30,6 +33,29 @@ camera_fov = math.radians(45)
 render_width = 200
 render_height = 200
 
+# Setup render tree
+# switch on nodes
+bpy.context.scene.use_nodes = True
+tree = bpy.context.scene.node_tree
+links = tree.links
+  
+# clear default nodes
+for n in tree.nodes:
+    tree.nodes.remove(n)
+  
+# create input render layer node
+rl = tree.nodes.new('CompositorNodeRLayers')
+ 
+# create output node
+v = tree.nodes.new('CompositorNodeViewer')   
+v.use_alpha = False
+
+min_depth = 0.5
+max_depth = 7
+
+# Links
+links.new(rl.outputs[2], v.inputs[0])  # link Depth output to Viewer input
+
 # Create the cameras and add them to the scene
 for i in range(num_cameras):
     # Create a new camera object
@@ -37,6 +63,9 @@ for i in range(num_cameras):
     
     # Set the FOV and aspect ratio of the camera
     camera.angle = camera_fov
+    
+    camera.clip_start = 0.1
+    camera.clip_end = 10
 
     # Create a new object for the camera
     camera_object = bpy.data.objects.new("Camera", camera)
@@ -58,7 +87,7 @@ for i in range(num_cameras):
     camera_object.matrix_world =  loc @ rot
 
     # Add the camera to the scene
-    scene.collection.objects.link(camera_object)
+    scene.collection.objects.link(camera_object) 
     
     # Save the camera's world matrix and FOV to the dictionary
     camera_data.append({
@@ -89,6 +118,27 @@ for camera_object in scene.objects:
 
         # Render the scene from the current camera
         bpy.ops.render.render(write_still=True)
+        
+        pixels = bpy.data.images['Viewer Node'].pixels
+         
+        # copy buffer to numpy array for faster manipulation
+        arr = np.array(pixels[:])
+        arr = arr.reshape((render_width, render_height, -1))[:,:,0]
+        print(arr, np.min(arr), np.max(arr))
+        arr[arr > max_depth] = max_depth
+        arr[arr < min_depth] = min_depth
+        arr -= min_depth
+        arr /= max_depth - min_depth
+        arr = (1.0 - arr) * 255
+        arr = np.flip(arr, axis = 0)
+        print(np.max(arr), np.min(arr))
+        assert np.max(arr) <= 255
+        assert np.min(arr) >= 0
+        print(arr.shape)
+        
+        cv2.imwrite(os.path.join(output_dir, "Camera_{}_depth.png".format(camera_object.name)), arr)
+        print("saved:", os.path.join(output_dir, "Camera_{}_depth.png".format(camera_object.name)))
+
 
 # Remove the cameras from the scene
 for camera_object in scene.objects:
