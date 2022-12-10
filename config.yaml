@@ -1,0 +1,9 @@
+wandb:
+  enabled: false
+  entity: mr4k
+  project: nerf
+data:
+  train_dir: "../data/cube/train/"
+  test_dir: "../data/cube/test/"
+  val_dir: "../data/cube/val/"
+  
