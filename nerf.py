@@ -1,3 +1,4 @@
+import json
 import torch
 import hydra
 
@@ -22,14 +23,14 @@ def get_network_output(network, points, dirs):
 def trace_ray(network, pos, dir, n, t_near, t_far):
     # TODO hmmm n + 1?
     stratified_sample_times = compute_stratified_sample_points(n + 1, t_near, t_far)
-    stratified_sample_points_centered_at_the_origin = stratified_sample_times.reshape(-1, 1).repeat(1, 3)
+    stratified_sample_points_centered_at_the_origin = stratified_sample_times.reshape(-1, 1).repeat(1, 3) * dir
     stratified_sample_points = stratified_sample_points_centered_at_the_origin + pos.reshape(-1, 1).repeat(1, n + 1).t()
     colors, opacity = get_network_output(network, stratified_sample_points, dir)
 
     cum_partial_passthrough_sum = torch.tensor(0.0)
     cum_color = torch.zeros(3)
-    cum_expected_depth = torch.tensor(0.0)
-    depth_acc = torch.tensor(t_near)
+    cum_expected_distance = torch.tensor(0.0)
+    distance_acc = torch.tensor(t_near)
 
     for i in range(n):
         delta = stratified_sample_times[i + 1] - stratified_sample_times[i]
@@ -39,16 +40,26 @@ def trace_ray(network, pos, dir, n, t_near, t_far):
         cum_color = cum_passthrough_prob * prob_hit_current_bin * colors[i]
 
         # we assume probability of collision is uniform in the bin
-        curr_depth = depth_acc + delta / 2
+        # TODO this might be an overestimate by delta / 2
+        curr_distance = distance_acc + delta / 2
 
-        print(stratified_sample_times[i], delta, prob_hit_current_bin, cum_passthrough_prob, curr_depth)
-
-        cum_expected_depth += cum_passthrough_prob * prob_hit_current_bin * curr_depth
+        cum_expected_distance += cum_passthrough_prob * prob_hit_current_bin * curr_distance
 
         cum_partial_passthrough_sum += opacity[i] * delta
-        depth_acc += delta
+        distance_acc += delta
 
-    return cum_color, cum_expected_depth
+    return cum_color, cum_expected_distance
+
+def load_config_file(path):
+    with open(path) as f:
+        config = json.load(f)
+        if "frames" not in config:
+            raise Exception(f"keyword 'frames' not found in config file at path: {path}")
+        return config["frames"]
+    pass
+
+def generate_ray_sample(fov, camera_transformation_matrix, px, py):
+    pass
 
 @hydra.main(version_base=None, config_path=".", config_name="config")
 def nerf_main(cfg):
