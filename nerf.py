@@ -58,8 +58,23 @@ def load_config_file(path):
         return config["frames"]
     pass
 
-def generate_ray_sample(fov, camera_transformation_matrix, px, py):
-    pass
+"""
+fov: angle of field of view in radians
+camera_transformation_matrix: a 3x3 matrix representing the rotation of the camera
+px, py: the locations of the pixels on the screen in [0, 1]
+aspect_ratio: width / height
+"""
+def generate_ray(fov, camera_rotation_matrix, px, py, aspect_ratio = 1):
+    # opp / adj
+    # adj = 1
+    # opp = torch.tan(fov / 2.0)
+    x = (2*px - 1)*torch.tan(fov / 2.0) * aspect_ratio
+    y = (2*py - 1)*torch.tan(fov / 2.0)
+    z = 1
+    ray = torch.tensor([[x, y, z]])
+    torch.mm(ray, camera_rotation_matrix)
+    ray /= ray.norm()
+    return ray
 
 @hydra.main(version_base=None, config_path=".", config_name="config")
 def nerf_main(cfg):

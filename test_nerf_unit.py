@@ -1,7 +1,7 @@
 import unittest
 import torch
 
-from nerf import compute_stratified_sample_points, trace_ray
+from nerf import compute_stratified_sample_points, generate_ray, trace_ray
 
 class TestNerfUnit(unittest.TestCase):
 
@@ -22,7 +22,7 @@ class TestNerfUnit(unittest.TestCase):
             dir /= dir.norm()
 
             camera_pos = torch.rand(3) * 100
-            
+
             def distance_network(points, dirs):
                 colors = []
                 opacity = []
@@ -39,6 +39,42 @@ class TestNerfUnit(unittest.TestCase):
             _, distance = trace_ray(distance_network, camera_pos, dir, 500, 0.1, 101)
             self.assertLess(distance, solid_distance + 0.5)
             self.assertGreater(distance, solid_distance - 0.5)
+
+    def test_generate_ray(self):
+        epsilon = 0.0001
+        expected = torch.tensor([[0, 0, 1]])
+        result = generate_ray(torch.tensor(90 * torch.pi / 180), torch.eye(3), 0.5, 0.5, 1)
+        self.assertLess((expected - result).norm(), epsilon, f"expected {expected} got {result} instead")
+
+        side_length = torch.tensor(1.0) / torch.sqrt(torch.tensor(2.0))
+        expected = torch.tensor([[side_length, 0, side_length]])
+        result = generate_ray(torch.tensor(90 * torch.pi / 180), torch.eye(3), 1, 0.5, 1)
+        self.assertLess((expected - result).norm(), epsilon, f"expected {expected} got {result} instead")
+
+        side_length = torch.tensor(1.0) / torch.sqrt(torch.tensor(2.0))
+        expected = torch.tensor([[0, side_length, side_length]])
+        result = generate_ray(torch.tensor(90 * torch.pi / 180), torch.eye(3), 0.5, 1, 1)
+        self.assertLess((expected - result).norm(), epsilon, f"expected {expected} got {result} instead")
+
+        expected = torch.tensor(
+            [
+                [
+                    torch.sin(torch.tensor(90 * torch.pi / 180) / 4.0),
+                    0,
+                    torch.cos(torch.tensor(90 * torch.pi / 180) / 4.0)
+                ]
+            ]
+        )
+        result = generate_ray(torch.tensor(45 * torch.pi / 180), torch.eye(3), 1.0, 0.5, 1)
+        self.assertLess((expected - result).norm(), epsilon, f"expected {expected} got {result} instead")
+
+        # test invariant to scale
+        side_length = torch.tensor(1.0) / torch.sqrt(torch.tensor(2.0))
+        expected = torch.tensor([[0, side_length, side_length]])
+        result = generate_ray(torch.tensor(90 * torch.pi / 180), torch.eye(3) * 4.0, 0.5, 1, 1)
+        self.assertLess((expected - result).norm(), epsilon, f"expected {expected} got {result} instead")
+    
+
 
 if __name__ == '__main__':
     unittest.main()
