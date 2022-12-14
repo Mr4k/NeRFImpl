@@ -42,27 +42,25 @@ class TestNerfUnit(unittest.TestCase):
 
     def test_generate_ray(self):
         epsilon = 0.0001
-        expected = torch.tensor([[0, 0, 1]])
+        expected = torch.tensor([0, 0, 1])
         result = generate_ray(torch.tensor(90 * torch.pi / 180), torch.eye(3), 0.5, 0.5, 1)
         self.assertLess((expected - result).norm(), epsilon, f"expected {expected} got {result} instead")
 
         side_length = torch.tensor(1.0) / torch.sqrt(torch.tensor(2.0))
-        expected = torch.tensor([[side_length, 0, side_length]])
+        expected = torch.tensor([side_length, 0, side_length])
         result = generate_ray(torch.tensor(90 * torch.pi / 180), torch.eye(3), 1, 0.5, 1)
         self.assertLess((expected - result).norm(), epsilon, f"expected {expected} got {result} instead")
 
         side_length = torch.tensor(1.0) / torch.sqrt(torch.tensor(2.0))
-        expected = torch.tensor([[0, side_length, side_length]])
+        expected = torch.tensor([0, side_length, side_length])
         result = generate_ray(torch.tensor(90 * torch.pi / 180), torch.eye(3), 0.5, 1, 1)
         self.assertLess((expected - result).norm(), epsilon, f"expected {expected} got {result} instead")
 
         expected = torch.tensor(
             [
-                [
-                    torch.sin(torch.tensor(90 * torch.pi / 180) / 4.0),
-                    0,
-                    torch.cos(torch.tensor(90 * torch.pi / 180) / 4.0)
-                ]
+                torch.sin(torch.tensor(90 * torch.pi / 180) / 4.0),
+                0,
+                torch.cos(torch.tensor(90 * torch.pi / 180) / 4.0)
             ]
         )
         result = generate_ray(torch.tensor(45 * torch.pi / 180), torch.eye(3), 1.0, 0.5, 1)
@@ -70,7 +68,7 @@ class TestNerfUnit(unittest.TestCase):
 
         # test invariant to scale
         side_length = torch.tensor(1.0) / torch.sqrt(torch.tensor(2.0))
-        expected = torch.tensor([[0, side_length, side_length]])
+        expected = torch.tensor([0, side_length, side_length])
         result = generate_ray(torch.tensor(90 * torch.pi / 180), torch.eye(3) * 4.0, 0.5, 1, 1)
         self.assertLess((expected - result).norm(), epsilon, f"expected {expected} got {result} instead")
     

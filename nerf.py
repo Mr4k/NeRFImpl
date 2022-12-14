@@ -72,9 +72,13 @@ def generate_ray(fov, camera_rotation_matrix, px, py, aspect_ratio = 1):
     y = (2*py - 1)*torch.tan(fov / 2.0)
     z = 1
     ray = torch.tensor([[x, y, z]])
-    torch.mm(ray, camera_rotation_matrix)
+    ray = torch.mm(ray, camera_rotation_matrix)
     ray /= ray.norm()
-    return ray
+    return ray.flatten()
+
+def get_camera_position(camera_transformation_matrix):
+    ray = torch.tensor([[0, 0, 1.0, 1.0]])
+    return torch.mm(ray, camera_transformation_matrix)[0, :3]
 
 @hydra.main(version_base=None, config_path=".", config_name="config")
 def nerf_main(cfg):
