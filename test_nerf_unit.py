@@ -43,53 +43,36 @@ class TestNerfUnit(unittest.TestCase):
                 self.assertGreater(d, solid_distance - 0.5)
 
     def test_trace_ray_distance_far(self):
-        dir = torch.tensor([1, 0, 0])
+        dirs = torch.tensor([[1, 0, 0]])
 
-        camera_pos = torch.tensor([2, 2, 3])
+        camera_poses = torch.tensor([[2, 2, 3]])
 
         def distance_network(points, dirs):
-            colors = []
-            opacity = []
-            for _ in range(points.shape[0]):
-                opacity.append(0)
-                colors.append(torch.rand(3))
+            batch_size, num_points, _ = points.shape
+
+            opacity = torch.zeros((batch_size, num_points))
+            colors = torch.zeros((batch_size, num_points, 3))
             return colors, opacity
 
-        _, distance = trace_ray(distance_network, camera_pos, dir, 100, 0.1, 101)
-        self.assertAlmostEqual(distance.clone().detach().numpy(), 101, 3)
+        _, distance = trace_ray(distance_network, camera_poses, dirs, 100, 0.1, 101)
+        self.assertAlmostEqual(distance.clone().detach().numpy()[0], 101, 3)
 
     def test_trace_ray_distance_near(self):
-        dir = torch.tensor([1, 0, 0])
+        dirs = torch.tensor([[1, 0, 0]])
 
-        camera_pos = torch.tensor([2, 2, 3])
+        camera_poses = torch.tensor([[2, 2, 3]])
         t_near = 30.0
 
         def distance_network(points, dirs):
-            colors = []
-            opacity = []
-            for _ in range(points.shape[0]):
-                opacity.append(10000)
-                colors.append(torch.rand(3))
+            batch_size, num_points, _ = points.shape
+
+            opacity = torch.ones((batch_size, num_points)) * 10000
+            colors = torch.zeros((batch_size, num_points, 3))
             return colors, opacity
 
-        _, distance = trace_ray(distance_network, camera_pos, dir, 100, t_near, 101)
-        self.assertLess(torch.abs(distance - torch.tensor(t_near)), 1.0)
+        _, distance = trace_ray(distance_network, camera_poses, dirs, 100, t_near, 101)
+        self.assertLess(torch.abs(distance[0] - torch.tensor(t_near)), 1.0)
 
-    def test_trace_ray_distance_far(self):
-        dir = torch.tensor([1, 0, 0])
-
-        camera_pos = torch.tensor([2, 2, 3])
-
-        def distance_network(points, dirs):
-            colors = []
-            opacity = []
-            for i in range(points.shape[0]):
-                opacity.append(0)
-                colors.append(torch.rand(3))
-            return colors, opacity
-
-        _, distance = trace_ray(distance_network, camera_pos, dir, 100, 0.1, 101)
-        self.assertAlmostEqual(distance.clone().detach().numpy(), 101, 3)
 
     def test_generate_ray(self):
         epsilon = 0.0001
