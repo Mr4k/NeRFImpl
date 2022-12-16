@@ -67,8 +67,10 @@ class TestNerfUnit(unittest.TestCase):
             average_depth_error = total_depth_error / size / size
             expected_average_depth_error = 0.05
             self.assertLess(average_depth_error, expected_average_depth_error, f"expected avg depth error {average_depth_error} to be smaller than {expected_average_depth_error}")
-            imageio.imwrite("recon" + image_src, result.t().fliplr().numpy())
-        pass
+            
+            out_dir = "./e2e_output/test_rendering_depth_e2e_with_given_network/"
+            os.makedirs(out_dir, exist_ok=True)
+            imageio.imwrite(out_dir + "output_" + image_src, result.t().fliplr().numpy())
             
 
 if __name__ == '__main__':

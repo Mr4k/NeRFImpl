@@ -52,7 +52,7 @@ def trace_ray(network, pos, dir, n, t_near, t_far):
     cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
     cum_expected_distance += cum_passthrough_prob * t_far
 
-    return cum_color, torch.max(cum_expected_distance, t_near)
+    return cum_color, torch.min(torch.max(cum_expected_distance, torch.tensor(t_near)), torch.tensor(t_far))
 
 def load_config_file(path):
     with open(path) as f:
