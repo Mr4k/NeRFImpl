@@ -18,31 +18,29 @@ class TestNerfUnit(unittest.TestCase):
                 self.assertLess(points[1], 3)
 
     def test_trace_ray_distance(self):
+        batch_size = 10
         for _ in range(1000):
             solid_distance = torch.rand(1) * 100
 
-            dir = torch.rand(3)
-            dir /= dir.norm()
+            dirs = torch.rand((batch_size, 3))
+            dirs /= dirs.norm(dim=1).reshape(-1, 1).repeat(1, 3)
 
-            camera_pos = torch.rand(3) * 100
+            camera_pos = torch.rand((batch_size, 3)) * 100
 
             def distance_network(points, dirs):
+                batch_size, num_points, point_dims = points.shape
                 colors = []
                 opacity = []
-                for i in range(points.shape[0]):
-                    p = points[i]
-                    distance = (p - camera_pos).norm()
-                    if distance < solid_distance:
-                        opacity.append(0)
-                        colors.append(torch.rand(3))
-                        continue
-                    colors.append(torch.rand(3))
-                    opacity.append(10000)
+                distances = (points - camera_pos.reshape(batch_size, 1, point_dims).repeat(1, num_points, 1)).norm(dim=2)
+                opacity = torch.zeros((batch_size, num_points))
+                opacity[distances >= solid_distance] = 10000
+                colors = torch.zeros((batch_size, num_points, 3))
                 return colors, opacity
 
-            _, distance = trace_ray(distance_network, camera_pos, dir, 500, 0.1, 101)
-            self.assertLess(distance, solid_distance + 0.5)
-            self.assertGreater(distance, solid_distance - 0.5)
+            _, out_distances = trace_ray(distance_network, camera_pos, dirs, 500, 0.1, 101)
+            for d in out_distances:
+                self.assertLess(d, solid_distance + 0.5)
+                self.assertGreater(d, solid_distance - 0.5)
 
     def test_trace_ray_distance_far(self):
         dir = torch.tensor([1, 0, 0])

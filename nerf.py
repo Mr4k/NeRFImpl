@@ -15,7 +15,7 @@ Returns an arr of n sampling points
 def compute_stratified_sample_points(batch_size, n, t_near, t_far):
     bin_width = t_far - t_near
     return (
-        torch.tensor(t_near).repeat(batch_size, 2)
+        torch.tensor(t_near).repeat(batch_size, n)
         + bin_width
         * (torch.rand((batch_size, n)) + torch.arange(n).repeat(batch_size, 1))
         / n
@@ -37,27 +37,28 @@ def trace_ray(network, positions, directions, n, t_near, t_far):
 
     assert positions.shape[0] == directions.shape[0]
 
-    stratified_sample_times = compute_stratified_sample_points(n + 1, t_near, t_far)
+    stratified_sample_times = compute_stratified_sample_points(batch_size, n + 1, t_near, t_far)
+
     stratified_sample_points_centered_at_the_origin = (
-        stratified_sample_times.reshape(-1, 1).repeat(1, 3) * directions
+        stratified_sample_times.reshape(batch_size, n + 1, 1).repeat(1, 1, 3) * directions.reshape(batch_size, 1, -1).repeat(1, n + 1, 1)
     )
     stratified_sample_points = (
         stratified_sample_points_centered_at_the_origin
-        + positions.reshape(-1, 1).repeat(1, n + 1).t()
+        + positions.reshape(batch_size, 1, -1).repeat(1, n + 1, 1)
     )
     colors, opacity = get_network_output(network, stratified_sample_points, directions)
 
-    cum_partial_passthrough_sum = torch.tensor(0.0)
-    cum_color = torch.zeros(3)
-    cum_expected_distance = torch.tensor(0.0)
-    distance_acc = torch.tensor(t_near)
+    cum_partial_passthrough_sum = torch.zeros(batch_size)
+    cum_color = torch.zeros((batch_size, 3))
+    cum_expected_distance = torch.zeros(batch_size)
+    distance_acc = torch.ones(batch_size) * t_near
 
     for i in range(n):
-        delta = stratified_sample_times[i + 1] - stratified_sample_times[i]
-        prob_hit_current_bin = 1 - torch.exp(-opacity[i] * delta)
+        delta = stratified_sample_times[:, i + 1] - stratified_sample_times[:, i]
+        prob_hit_current_bin = 1 - torch.exp(-opacity[:, i] * delta)
         cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
 
-        cum_color = cum_passthrough_prob * prob_hit_current_bin * colors[i]
+        cum_color = (cum_passthrough_prob * prob_hit_current_bin).reshape(-1, 1).repeat(1, 3) * colors[:, i]
 
         # we assume probability of collision is uniform in the bin
         # TODO this might be an overestimate by delta / 2
@@ -67,7 +68,7 @@ def trace_ray(network, positions, directions, n, t_near, t_far):
             cum_passthrough_prob * prob_hit_current_bin * curr_distance
         )
 
-        cum_partial_passthrough_sum += opacity[i] * delta
+        cum_partial_passthrough_sum += opacity[:, i] * delta
         distance_acc += delta
 
     # add far plane
