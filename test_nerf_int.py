@@ -14,16 +14,12 @@ from tqdm import tqdm
 class TestNerfUnit(unittest.TestCase):
     def test_rendering_depth_e2e_with_given_network(self):
         def cube_network(points, dirs):
-            colors = []
-            opacity = []
-            for i in range(points.shape[0]):
-                p = points[i]
-                if torch.max(torch.abs(p)) <= 1.0:
-                    opacity.append(10000)
-                    colors.append(torch.rand(3))
-                    continue
-                colors.append(torch.rand(3))
-                opacity.append(0)
+            batch_size, num_points, point_dims = points.shape
+
+            distances_from_origin = torch.linalg.norm().norm(points, dim=2, ord=1)
+            opacity = torch.zeros((batch_size, num_points))
+            opacity[distances_from_origin <= 1.0] = 10000
+            colors = torch.zeros((batch_size, num_points, 3))
             return colors, opacity
 
         frames = load_config_file("./integration_test_data/cameras.json")
@@ -36,7 +32,9 @@ class TestNerfUnit(unittest.TestCase):
             ).t()
             image_src = f["file_path"]
 
-            camera_pos = get_camera_position(transformation_matrix)
+            size = 100
+            batch_size = size * size
+            camera_poses = get_camera_position(transformation_matrix).reshape(1, -1).repeat(batch_size, 1)
 
             fname, _ = image_src.split(".png")
             ext = "png"
@@ -53,7 +51,6 @@ class TestNerfUnit(unittest.TestCase):
 
             center_ray = generate_ray(fov, transformation_matrix[:3, :3], 0.5, 0.5, 1)
 
-            size = 100
             result = torch.zeros((size, size), dtype=torch.int)
             total_depth_error = 0
             for x in tqdm(range(size)):

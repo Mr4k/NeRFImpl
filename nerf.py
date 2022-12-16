@@ -94,19 +94,23 @@ def load_config_file(path):
 """
 fov: angle of field of view in radians
 camera_transformation_matrix: a 3x3 matrix representing the rotation of the camera
-px, py: the locations of the pixels on the screen in [0, 1]
+screen_points: (batch_size, 2), the locations of the pixels on the screen in [0, 1]^2
 aspect_ratio: width / height
+
+output: (batch_size, 3)
 """
 
 
-def generate_ray(fov, camera_rotation_matrix, px, py, aspect_ratio=1):
+def generate_rays(fov, camera_rotation_matrix, screen_points, aspect_ratio=1):
     # opp / adj
     # adj = 1
     # opp = torch.tan(fov / 2.0)
-    x = (2 * px - 1) * torch.tan(fov / 2.0) * aspect_ratio
-    y = (2 * py - 1) * torch.tan(fov / 2.0)
-    z = 1.0
-    ray = torch.tensor([[x, y, z]])
+    batch_size = screen_points.shape[0]
+    x = (2 * screen_points[:, 0] - 1) * torch.tan(fov / 2.0) * aspect_ratio
+    y = (2 * screen_points[:, 1] - 1) * torch.tan(fov / 2.0)
+    z = torch.tensor([1.0]).repeat(batch_size)
+    print(x.shape, y.shape, z.shape)
+    ray = torch.tensor([x, y, z])
     ray = torch.mm(ray, camera_rotation_matrix)
     ray /= ray.norm()
     return -ray.flatten()
