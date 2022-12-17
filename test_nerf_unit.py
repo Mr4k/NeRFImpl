@@ -29,13 +29,20 @@ class TestNerfUnit(unittest.TestCase):
 
             def distance_network(points, dirs):
                 batch_size, num_points, point_dims = points.shape
-                distances = (points - camera_pos.reshape(batch_size, 1, point_dims).repeat(1, num_points, 1)).norm(dim=2)
+                distances = (
+                    points
+                    - camera_pos.reshape(batch_size, 1, point_dims).repeat(
+                        1, num_points, 1
+                    )
+                ).norm(dim=2)
                 opacity = torch.zeros((batch_size, num_points))
                 opacity[distances >= solid_distance] = 10000
                 colors = torch.zeros((batch_size, num_points, 3))
                 return colors, opacity
 
-            _, out_distances = trace_ray(distance_network, camera_pos, dirs, 500, 0.1, 101)
+            _, out_distances = trace_ray(
+                distance_network, camera_pos, dirs, 500, 0.1, 101
+            )
             for d in out_distances:
                 self.assertLess(d, solid_distance + 0.5)
                 self.assertGreater(d, solid_distance - 0.5)
@@ -75,14 +82,20 @@ class TestNerfUnit(unittest.TestCase):
         epsilon = 0.0001
         side_length = torch.tensor(1.0) / torch.sqrt(torch.tensor(2.0))
         batch_size = 4
-        expected = torch.stack([
+        expected = torch.stack(
+            [
                 -torch.tensor([0, 0, 1]),
                 -torch.tensor([side_length, 0, side_length]),
                 -torch.tensor([0, side_length, side_length]),
-                -torch.tensor([0, 0, 1])])
-        
+                -torch.tensor([0, 0, 1]),
+            ]
+        )
+
         result = generate_rays(
-            torch.tensor(90 * torch.pi / 180), torch.eye(3), torch.tensor([[0.5, 0.5], [1.0, 0.5], [0.5, 1.0], [0.5, 0.5]]), 1
+            torch.tensor(90 * torch.pi / 180),
+            torch.eye(3),
+            torch.tensor([[0.5, 0.5], [1.0, 0.5], [0.5, 1.0], [0.5, 0.5]]),
+            1,
         )
         self.assertEqual(result.shape, torch.Size([4, 3]))
         self.assertLess(
@@ -95,7 +108,10 @@ class TestNerfUnit(unittest.TestCase):
         epsilon = 0.0001
         expected = -torch.tensor([0, 0, 1])
         result = generate_rays(
-            torch.tensor(90 * torch.pi / 180), torch.eye(3), torch.tensor([[0.5, 0.5]]), 1
+            torch.tensor(90 * torch.pi / 180),
+            torch.eye(3),
+            torch.tensor([[0.5, 0.5]]),
+            1,
         )
         self.assertLess(
             (expected - result).norm(),
@@ -133,7 +149,10 @@ class TestNerfUnit(unittest.TestCase):
             ]
         )
         result = generate_rays(
-            torch.tensor(45 * torch.pi / 180), torch.eye(3), torch.tensor([[1.0, 0.5]]), 1
+            torch.tensor(45 * torch.pi / 180),
+            torch.eye(3),
+            torch.tensor([[1.0, 0.5]]),
+            1,
         )
         self.assertLess(
             (expected - result).norm(),
@@ -145,7 +164,10 @@ class TestNerfUnit(unittest.TestCase):
         side_length = torch.tensor(1.0) / torch.sqrt(torch.tensor(2.0))
         expected = -torch.tensor([0, side_length, side_length])
         result = generate_rays(
-            torch.tensor(90 * torch.pi / 180), torch.eye(3) * 4.0, torch.tensor([[0.5, 1]]), 1
+            torch.tensor(90 * torch.pi / 180),
+            torch.eye(3) * 4.0,
+            torch.tensor([[0.5, 1]]),
+            1,
         )
         self.assertLess(
             (expected - result).norm(),

@@ -34,7 +34,11 @@ class TestNerfUnit(unittest.TestCase):
 
             size = 100
             batch_size = size * size
-            camera_poses = get_camera_position(transformation_matrix).reshape(1, -1).repeat(batch_size, 1)
+            camera_poses = (
+                get_camera_position(transformation_matrix)
+                .reshape(1, -1)
+                .repeat(batch_size, 1)
+            )
 
             fname, _ = image_src.split(".png")
             ext = "png"

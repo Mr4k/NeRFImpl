@@ -37,11 +37,13 @@ def trace_ray(network, positions, directions, n, t_near, t_far):
 
     assert positions.shape[0] == directions.shape[0]
 
-    stratified_sample_times = compute_stratified_sample_points(batch_size, n + 1, t_near, t_far)
-
-    stratified_sample_points_centered_at_the_origin = (
-        stratified_sample_times.reshape(batch_size, n + 1, 1).repeat(1, 1, 3) * directions.reshape(batch_size, 1, -1).repeat(1, n + 1, 1)
+    stratified_sample_times = compute_stratified_sample_points(
+        batch_size, n + 1, t_near, t_far
     )
+
+    stratified_sample_points_centered_at_the_origin = stratified_sample_times.reshape(
+        batch_size, n + 1, 1
+    ).repeat(1, 1, 3) * directions.reshape(batch_size, 1, -1).repeat(1, n + 1, 1)
     stratified_sample_points = (
         stratified_sample_points_centered_at_the_origin
         + positions.reshape(batch_size, 1, -1).repeat(1, n + 1, 1)
@@ -58,7 +60,9 @@ def trace_ray(network, positions, directions, n, t_near, t_far):
         prob_hit_current_bin = 1 - torch.exp(-opacity[:, i] * delta)
         cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
 
-        cum_color = (cum_passthrough_prob * prob_hit_current_bin).reshape(-1, 1).repeat(1, 3) * colors[:, i]
+        cum_color = (cum_passthrough_prob * prob_hit_current_bin).reshape(-1, 1).repeat(
+            1, 3
+        ) * colors[:, i]
 
         # we assume probability of collision is uniform in the bin
         # TODO this might be an overestimate by delta / 2
