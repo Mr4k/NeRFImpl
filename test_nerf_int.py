@@ -41,7 +41,7 @@ def cube_network(points, dirs):
         {
             "height_axis": 0,
             "height_axis_direction": 1,
-            "color": torch.tensor([1.0, 1.0, 0.0]),
+            "color": torch.tensor([0.0, 0.0, 1.0]),
         },
         {
             "height_axis": 0,
@@ -55,7 +55,7 @@ def cube_network(points, dirs):
 
     colors = torch.zeros((batch_size, num_points, 3))
 
-    """for pyramid in color_pyramids:
+    for pyramid in color_pyramids:
         height_axis = pyramid["height_axis"]
         height_axis_direction = pyramid["height_axis_direction"]
         color = pyramid["color"]
@@ -63,11 +63,15 @@ def cube_network(points, dirs):
         other_axes = [0, 1, 2]
         other_axes.remove(height_axis)
         cond1 = points[:, :, height_axis] * height_axis_direction >= 0
-        cond2 = torch.abs(points[:, :, other_axes[0]] - points[:, :, height_axis]) <= 1
-        cond3 = torch.abs(points[:, :, other_axes[1]] - points[:, :, height_axis]) <= 1
-        colors[cond1 & cond2 & cond3, :] = color"""
-    sphere_ds = torch.norm(points, dim=2)
-    colors[sphere_ds < 1.2, :] = torch.tensor([1.0, 1.0, 0.0])
+        cond2 = torch.abs(points[:, :, other_axes[0]]) <= torch.abs(
+            points[:, :, height_axis]
+        )
+        cond3 = torch.abs(points[:, :, other_axes[1]]) <= torch.abs(
+            points[:, :, height_axis]
+        )
+        colors[cond1 & cond2 & cond3, :] = color
+    # sphere_ds = torch.norm(points, dim=2)
+    # colors[sphere_ds < 1.2, :] = torch.tensor([1.0, 1.0, 0.0])
 
     return colors, opacity
 
@@ -79,7 +83,6 @@ class TestNerfUnit(unittest.TestCase):
         far = 7
         for f in frames:
             fov = torch.tensor(f["fov"])
-            # fov = torch.tensor(10 / 180 * torch.pi)
             transformation_matrix = torch.tensor(
                 f["transformation_matrix"], dtype=torch.float
             ).t()
@@ -96,6 +99,7 @@ class TestNerfUnit(unittest.TestCase):
             fname, _ = image_src.split(".png")
             ext = "png"
             image_src = fname + "_depth" + "." + ext
+            color_image_src = fname + "." + ext
 
             pixels = (
                 torch.tensor(
@@ -133,10 +137,8 @@ class TestNerfUnit(unittest.TestCase):
             out_dir = "./e2e_output/test_rendering_depth_e2e_with_given_network/"
 
             expected_depth = (1 - pixels.flatten() / 255.0) * (far - near) + near
-            print("max", torch.min(expected_depth), torch.max(expected_depth))
             l1_depth_error = torch.abs(depth - expected_depth)
             p95_l1_depth_error = torch.quantile(l1_depth_error, 0.95)
-            print("p95 min:", torch.min(p95_l1_depth_error))
 
             os.makedirs(out_dir, exist_ok=True)
             imageio.imwrite(
@@ -147,9 +149,8 @@ class TestNerfUnit(unittest.TestCase):
                 out_dir + "output_diff_" + image_src,
                 (l1_depth_error).reshape((size, size)).t().fliplr().numpy(),
             )
-
             imageio.imwrite(
-                out_dir + "output_colors_" + image_src,
+                out_dir + "output_colors_" + color_image_src,
                 (out_colors * 255)
                 .reshape((size, size, 3))
                 .transpose(0, 1)
