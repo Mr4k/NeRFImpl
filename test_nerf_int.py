@@ -16,7 +16,10 @@ class TestNerfUnit(unittest.TestCase):
         def cube_network(points, dirs):
             batch_size, num_points, _ = points.shape
 
-            distances_from_origin = torch.linalg.norm(points, dim=2, ord=1)
+            print("pts", points.shape)
+            distances_from_origin, _ = torch.max(torch.abs(points), dim=2)
+            print("dfo", distances_from_origin.shape)
+
             opacity = torch.zeros((batch_size, num_points))
             opacity[distances_from_origin <= 1.0] = 10000
             colors = torch.zeros((batch_size, num_points, 3))
@@ -54,7 +57,6 @@ class TestNerfUnit(unittest.TestCase):
             width, height = pixels.shape
 
             center_ray = generate_rays(fov, transformation_matrix[:3, :3], torch.tensor([[0.5, 0.5]]), 1)
-            print("crs:", center_ray.shape)
 
             result = torch.zeros((size, size), dtype=torch.int)
             total_depth_error = 0
@@ -62,9 +64,9 @@ class TestNerfUnit(unittest.TestCase):
             xs = torch.arange(0, 1, 1.0 / size)
             ys = torch.arange(0, 1, 1.0 / size)
             screen_points = torch.cartesian_prod(xs, ys)
-            print("sps:", screen_points.shape)
+            # (batch_size, 3) (3, 1) = (batch_size, 1)
             rays = generate_rays(fov, transformation_matrix[:3, :3], screen_points, 1)
-            print("rayz:", rays.shape)
+            ray_dist_from_center = torch.matmul(rays, center_ray.t())
             _, dist = trace_ray(
                 cube_network,
                 camera_poses,
@@ -73,7 +75,6 @@ class TestNerfUnit(unittest.TestCase):
                 near, #/ distance_to_depth_modifier,
                 far,# / distance_to_depth_modifier,
             )
-            print("dsit:", dist.shape)
             out_dir = "./e2e_output/test_rendering_depth_e2e_with_given_network/"
             os.makedirs(out_dir, exist_ok=True)
             imageio.imwrite(
