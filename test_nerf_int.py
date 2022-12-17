@@ -54,17 +54,17 @@ class TestNerfUnit(unittest.TestCase):
                 .flipud()
                 .float()
             )
-            width, height = pixels.shape
 
-            center_ray = generate_rays(fov, transformation_matrix[:3, :3], torch.tensor([[0.5, 0.5]]), 1)
-
-            result = torch.zeros((size, size), dtype=torch.int)
-            total_depth_error = 0
+            center_ray = generate_rays(
+                fov, transformation_matrix[:3, :3], torch.tensor([[0.5, 0.5]]), 1
+            )
 
             xs = torch.arange(0, 1, 1.0 / size)
             ys = torch.arange(0, 1, 1.0 / size)
-            screen_points = torch.cartesian_prod(xs, ys) + torch.tensor([[0.5/size, 0.5/size]]).repeat(batch_size, 1)
-            # (batch_size, 3) (3, 1) = (batch_size, 1)
+            screen_points = torch.cartesian_prod(xs, ys) + torch.tensor(
+                [[0.5 / size, 0.5 / size]]
+            ).repeat(batch_size, 1)
+
             rays = generate_rays(fov, transformation_matrix[:3, :3], screen_points, 1)
             distance_to_depth_modifiers = torch.matmul(rays, center_ray.t())[:, 0]
             _, dist = trace_ray(
@@ -75,61 +75,34 @@ class TestNerfUnit(unittest.TestCase):
                 torch.tensor(near).repeat(batch_size) / distance_to_depth_modifiers,
                 torch.tensor(far).repeat(batch_size) / distance_to_depth_modifiers,
             )
-            #depth = dist
             depth = dist * distance_to_depth_modifiers
-            depth -= near
-            depth /= (far - near)
-            depth = 1 - depth
-            depth *= 255
+            normalized_depth = (depth - near) / (far - near)
+            inverted_normalized_depth = 1 - normalized_depth
+            out_depth = inverted_normalized_depth * 255
             out_dir = "./e2e_output/test_rendering_depth_e2e_with_given_network/"
+
+            expected_depth = (1 - pixels.flatten() / 255.0) * (far - near) + near
+            print("max", torch.min(expected_depth), torch.max(expected_depth))
+            l1_depth_error = torch.abs(depth - expected_depth)
+            p95_l1_depth_error = torch.quantile(l1_depth_error, 0.95)
+            print("p95 min:", torch.min(p95_l1_depth_error))
+
             os.makedirs(out_dir, exist_ok=True)
             imageio.imwrite(
-                out_dir + "output_" + image_src, (depth - pixels.flatten()).abs().reshape((size, size)).t().fliplr().numpy()
+                out_dir + "output_" + image_src,
+                (out_depth).reshape((size, size)).t().fliplr().numpy(),
             )
-            expected_average_l1_depth_error = 0.05
-            average_l1_depth_error = torch.abs(depth - pixels.flatten()).sum() / batch_size
-            self.assertLess(
-                average_l1_depth_error,
-                expected_average_l1_depth_error,
-                f"expected avg depth error {average_l1_depth_error} to be smaller than {expected_average_l1_depth_error}",
-            )
-            """for x in tqdm(range(size)):
-                for y in range(size):
-                    s_x = x / size + 0.5 / size
-                    s_y = y / size + 0.5 / size
-                    ray = generate_rays(fov, transformation_matrix[:3, :3], s_x, s_y, 1)
-                    distance_to_depth_modifier = torch.dot(ray, center_ray)
-
-                    expected_depth = (
-                        1 - pixels[int(height * s_y), int(width * s_x)] / 255.0
-                    ) * (far - near) + near
-                    _, dist = trace_ray(
-                        cube_network,
-                        camera_pos,
-                        ray,
-                        100,
-                        near / distance_to_depth_modifier,
-                        far / distance_to_depth_modifier,
-                    )
-                    depth = dist * distance_to_depth_modifier
-                    normalized_depth = (depth - near) / (far - near)
-                    inverted_normalized_depth = 1 - normalized_depth
-                    result[x, y] = int(inverted_normalized_depth * 255)
-                    total_depth_error += torch.abs(depth - expected_depth)
-
-            average_depth_error = total_depth_error / size / size
-            expected_average_depth_error = 0.05
-            self.assertLess(
-                average_depth_error,
-                expected_average_depth_error,
-                f"expected avg depth error {average_depth_error} to be smaller than {expected_average_depth_error}",
-            )
-
-            out_dir = "./e2e_output/test_rendering_depth_e2e_with_given_network/"
-            os.makedirs(out_dir, exist_ok=True)
             imageio.imwrite(
-                out_dir + "output_" + image_src, result.t().fliplr().numpy()
-            )"""
+                out_dir + "output_diff_" + image_src,
+                (l1_depth_error).reshape((size, size)).t().fliplr().numpy(),
+            )
+
+            expected_p95_l1_depth_error = 0.1
+            self.assertLess(
+                p95_l1_depth_error,
+                expected_p95_l1_depth_error,
+                f"expected p95 depth error {p95_l1_depth_error} to be smaller than {expected_p95_l1_depth_error}",
+            )
 
 
 if __name__ == "__main__":

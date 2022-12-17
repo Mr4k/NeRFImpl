@@ -35,6 +35,7 @@ Returns a tuple (colors, opacity)
 def get_network_output(network, points, dirs):
     return network(points, dirs)
 
+
 """
 network: TBD
 positions: tensor dims = (batch_size, 3)
@@ -43,6 +44,8 @@ n: int
 t_near: tensor dims = (batch_size)
 t_far: tensor dims = (batch_size)
 """
+
+
 def trace_ray(network, positions, directions, n, t_near, t_far):
     # TODO hmmm n + 1?
     batch_size = positions.shape[0]
@@ -71,6 +74,8 @@ def trace_ray(network, positions, directions, n, t_near, t_far):
     cum_expected_distance = torch.zeros(batch_size)
     distance_acc = torch.ones(batch_size) * t_near
 
+    # TODO (getting rid of this for loop likely speeds up rendering)
+    # on second thought maybe not, bottleneck will eventually likely be get_network_output
     for i in range(n):
         delta = stratified_sample_times[:, i + 1] - stratified_sample_times[:, i]
         prob_hit_current_bin = 1 - torch.exp(-opacity[:, i] * delta)
