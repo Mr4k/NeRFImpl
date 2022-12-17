@@ -81,7 +81,7 @@ def trace_ray(network, positions, directions, n, t_near, t_far):
         prob_hit_current_bin = 1 - torch.exp(-opacity[:, i] * delta)
         cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
 
-        cum_color = (cum_passthrough_prob * prob_hit_current_bin).reshape(-1, 1).repeat(
+        cum_color += (cum_passthrough_prob * prob_hit_current_bin).reshape(-1, 1).repeat(
             1, 3
         ) * colors[:, i]
 

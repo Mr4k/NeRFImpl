@@ -11,24 +11,73 @@ from nerf import generate_rays, get_camera_position, load_config_file, trace_ray
 
 from tqdm import tqdm
 
+def cube_network(points, dirs):
+    batch_size, num_points, _ = points.shape
+
+    distances_from_origin, _ = torch.max(torch.abs(points), dim=2)
+
+    color_pyramids = [
+        {
+            "height_axis": 2,
+            "height_axis_direction": 1,
+            "color": torch.tensor([1.0, 0.0, 0.0])
+        },
+        {
+            "height_axis": 2,
+            "height_axis_direction": -1,
+            "color": torch.tensor([1.0, 0.0, 1.0])
+        },
+        {
+            "height_axis": 1,
+            "height_axis_direction": 1,
+            "color": torch.tensor([0.0, 1.0, 1.0])
+        },
+        {
+            "height_axis": 1,
+            "height_axis_direction": -1,
+            "color": torch.tensor([0.0, 1.0, 0.0])
+        },
+        {
+            "height_axis": 0,
+            "height_axis_direction": 1,
+            "color": torch.tensor([1.0, 1.0, 0.0])
+        },
+        {
+            "height_axis": 0,
+            "height_axis_direction": -1,
+            "color": torch.tensor([1.0, 1.0, 0.0])
+        },
+    ]
+
+    opacity = torch.zeros((batch_size, num_points))
+    opacity[distances_from_origin <= 1.0] = 10000
+
+    colors = torch.zeros((batch_size, num_points, 3))
+
+    """for pyramid in color_pyramids:
+        height_axis = pyramid["height_axis"]
+        height_axis_direction = pyramid["height_axis_direction"]
+        color = pyramid["color"]
+
+        other_axes = [0, 1, 2]
+        other_axes.remove(height_axis)
+        cond1 = points[:, :, height_axis] * height_axis_direction >= 0
+        cond2 = torch.abs(points[:, :, other_axes[0]] - points[:, :, height_axis]) <= 1
+        cond3 = torch.abs(points[:, :, other_axes[1]] - points[:, :, height_axis]) <= 1
+        colors[cond1 & cond2 & cond3, :] = color"""
+    sphere_ds = torch.norm(points, dim = 2)
+    colors[sphere_ds < 1.2, :] = torch.tensor([1.0, 1.0, 0.0])
+
+    return colors, opacity
 
 class TestNerfUnit(unittest.TestCase):
     def test_rendering_depth_e2e_with_given_network(self):
-        def cube_network(points, dirs):
-            batch_size, num_points, _ = points.shape
-
-            distances_from_origin, _ = torch.max(torch.abs(points), dim=2)
-
-            opacity = torch.zeros((batch_size, num_points))
-            opacity[distances_from_origin <= 1.0] = 10000
-            colors = torch.zeros((batch_size, num_points, 3))
-            return colors, opacity
-
         frames = load_config_file("./integration_test_data/cameras.json")
         near = 0.5
         far = 7
         for f in frames:
             fov = torch.tensor(f["fov"])
+            #fov = torch.tensor(10 / 180 * torch.pi)
             transformation_matrix = torch.tensor(
                 f["transformation_matrix"], dtype=torch.float
             ).t()
@@ -67,7 +116,7 @@ class TestNerfUnit(unittest.TestCase):
 
             rays = generate_rays(fov, transformation_matrix[:3, :3], screen_points, 1)
             distance_to_depth_modifiers = torch.matmul(rays, center_ray.t())[:, 0]
-            _, dist = trace_ray(
+            out_colors, dist = trace_ray(
                 cube_network,
                 camera_poses,
                 rays,
@@ -95,6 +144,11 @@ class TestNerfUnit(unittest.TestCase):
             imageio.imwrite(
                 out_dir + "output_diff_" + image_src,
                 (l1_depth_error).reshape((size, size)).t().fliplr().numpy(),
+            )
+
+            imageio.imwrite(
+                out_dir + "output_colors_" + image_src,
+                (out_colors * 255).reshape((size, size, 3)).transpose(0, 1).flip([1]).numpy(),
             )
 
             expected_p95_l1_depth_error = 0.1
