@@ -11,6 +11,7 @@ from nerf import generate_rays, get_camera_position, load_config_file, trace_ray
 
 from tqdm import tqdm
 
+
 def cube_network(points, dirs):
     batch_size, num_points, _ = points.shape
 
@@ -20,32 +21,32 @@ def cube_network(points, dirs):
         {
             "height_axis": 2,
             "height_axis_direction": 1,
-            "color": torch.tensor([1.0, 0.0, 0.0])
+            "color": torch.tensor([1.0, 0.0, 0.0]),
         },
         {
             "height_axis": 2,
             "height_axis_direction": -1,
-            "color": torch.tensor([1.0, 0.0, 1.0])
+            "color": torch.tensor([1.0, 0.0, 1.0]),
         },
         {
             "height_axis": 1,
             "height_axis_direction": 1,
-            "color": torch.tensor([0.0, 1.0, 1.0])
+            "color": torch.tensor([0.0, 1.0, 1.0]),
         },
         {
             "height_axis": 1,
             "height_axis_direction": -1,
-            "color": torch.tensor([0.0, 1.0, 0.0])
+            "color": torch.tensor([0.0, 1.0, 0.0]),
         },
         {
             "height_axis": 0,
             "height_axis_direction": 1,
-            "color": torch.tensor([1.0, 1.0, 0.0])
+            "color": torch.tensor([1.0, 1.0, 0.0]),
         },
         {
             "height_axis": 0,
             "height_axis_direction": -1,
-            "color": torch.tensor([1.0, 1.0, 0.0])
+            "color": torch.tensor([1.0, 1.0, 0.0]),
         },
     ]
 
@@ -65,10 +66,11 @@ def cube_network(points, dirs):
         cond2 = torch.abs(points[:, :, other_axes[0]] - points[:, :, height_axis]) <= 1
         cond3 = torch.abs(points[:, :, other_axes[1]] - points[:, :, height_axis]) <= 1
         colors[cond1 & cond2 & cond3, :] = color"""
-    sphere_ds = torch.norm(points, dim = 2)
+    sphere_ds = torch.norm(points, dim=2)
     colors[sphere_ds < 1.2, :] = torch.tensor([1.0, 1.0, 0.0])
 
     return colors, opacity
+
 
 class TestNerfUnit(unittest.TestCase):
     def test_rendering_depth_e2e_with_given_network(self):
@@ -77,7 +79,7 @@ class TestNerfUnit(unittest.TestCase):
         far = 7
         for f in frames:
             fov = torch.tensor(f["fov"])
-            #fov = torch.tensor(10 / 180 * torch.pi)
+            # fov = torch.tensor(10 / 180 * torch.pi)
             transformation_matrix = torch.tensor(
                 f["transformation_matrix"], dtype=torch.float
             ).t()
@@ -148,7 +150,11 @@ class TestNerfUnit(unittest.TestCase):
 
             imageio.imwrite(
                 out_dir + "output_colors_" + image_src,
-                (out_colors * 255).reshape((size, size, 3)).transpose(0, 1).flip([1]).numpy(),
+                (out_colors * 255)
+                .reshape((size, size, 3))
+                .transpose(0, 1)
+                .flip([1])
+                .numpy(),
             )
 
             expected_p95_l1_depth_error = 0.1
