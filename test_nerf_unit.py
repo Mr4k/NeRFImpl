@@ -71,15 +71,25 @@ class TestNerfUnit(unittest.TestCase):
         _, distance = trace_ray(distance_network, camera_poses, dirs, 100, t_near, 101)
         self.assertLess(torch.abs(distance[0] - torch.tensor(t_near)), 1.0)
 
-    def test_generate_rays_multi_batch(self):
+    def test_generate_rays_multibatch(self):
         epsilon = 0.0001
-        expected = -torch.tensor([0, 0, 1])
-        result = generate_rays(
-            torch.tensor(90 * torch.pi / 180), torch.eye(3), torch.tensor([[0.5, 0.5], [1.0, 0.5], [0.0, 0.0], [1.0, 1.0]]), 1
-        )
-        self.assertEqual(result.shape, [4, 3])
+        side_length = torch.tensor(1.0) / torch.sqrt(torch.tensor(2.0))
+        batch_size = 4
+        expected = torch.stack([
+                -torch.tensor([0, 0, 1]),
+                -torch.tensor([side_length, 0, side_length]),
+                -torch.tensor([0, side_length, side_length]),
+                -torch.tensor([0, 0, 1])])
         
-        # TODO finish this test
+        result = generate_rays(
+            torch.tensor(90 * torch.pi / 180), torch.eye(3), torch.tensor([[0.5, 0.5], [1.0, 0.5], [0.5, 1.0], [0.5, 0.5]]), 1
+        )
+        self.assertEqual(result.shape, torch.Size([4, 3]))
+        self.assertLess(
+            (expected - result).norm(dim=1).sum() / batch_size,
+            epsilon,
+            f"expected {expected} got {result} instead",
+        )
 
     def test_generate_rays(self):
         epsilon = 0.0001

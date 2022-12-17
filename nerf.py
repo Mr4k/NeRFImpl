@@ -109,11 +109,10 @@ def generate_rays(fov, camera_rotation_matrix, screen_points, aspect_ratio=1):
     x = (2 * screen_points[:, 0] - 1) * torch.tan(fov / 2.0) * aspect_ratio
     y = (2 * screen_points[:, 1] - 1) * torch.tan(fov / 2.0)
     z = torch.tensor([1.0]).repeat(batch_size)
-    print(x.shape, y.shape, z.shape)
-    ray = torch.tensor([x, y, z])
+    ray = torch.stack([x, y, z], dim=-1)
     ray = torch.mm(ray, camera_rotation_matrix)
-    ray /= ray.norm()
-    return -ray.flatten()
+    ray /= ray.norm(dim=1).reshape(-1, 1).repeat(1, 3)
+    return -ray
 
 
 def get_camera_position(camera_transformation_matrix):
