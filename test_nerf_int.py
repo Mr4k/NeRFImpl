@@ -1,4 +1,5 @@
 import unittest
+from numpy import average
 import torch
 
 import imageio.v3 as iio
@@ -16,9 +17,7 @@ class TestNerfUnit(unittest.TestCase):
         def cube_network(points, dirs):
             batch_size, num_points, _ = points.shape
 
-            print("pts", points.shape)
             distances_from_origin, _ = torch.max(torch.abs(points), dim=2)
-            print("dfo", distances_from_origin.shape)
 
             opacity = torch.zeros((batch_size, num_points))
             opacity[distances_from_origin <= 1.0] = 10000
@@ -35,7 +34,7 @@ class TestNerfUnit(unittest.TestCase):
             ).t()
             image_src = f["file_path"]
 
-            size = 100
+            size = 200
             batch_size = size * size
             camera_poses = (
                 get_camera_position(transformation_matrix)
@@ -51,7 +50,8 @@ class TestNerfUnit(unittest.TestCase):
                 torch.tensor(
                     iio.imread(os.path.join("./integration_test_data/", image_src))
                 )
-                .fliplr()
+                .t()
+                .flipud()
                 .float()
             )
             width, height = pixels.shape
@@ -63,22 +63,35 @@ class TestNerfUnit(unittest.TestCase):
 
             xs = torch.arange(0, 1, 1.0 / size)
             ys = torch.arange(0, 1, 1.0 / size)
-            screen_points = torch.cartesian_prod(xs, ys)
+            screen_points = torch.cartesian_prod(xs, ys) + torch.tensor([[0.5/size, 0.5/size]]).repeat(batch_size, 1)
             # (batch_size, 3) (3, 1) = (batch_size, 1)
             rays = generate_rays(fov, transformation_matrix[:3, :3], screen_points, 1)
-            ray_dist_from_center = torch.matmul(rays, center_ray.t())
+            distance_to_depth_modifiers = torch.matmul(rays, center_ray.t())[:, 0]
             _, dist = trace_ray(
                 cube_network,
                 camera_poses,
                 rays,
                 100,
-                near, #/ distance_to_depth_modifier,
-                far,# / distance_to_depth_modifier,
+                torch.tensor(near).repeat(batch_size) / distance_to_depth_modifiers,
+                torch.tensor(far).repeat(batch_size) / distance_to_depth_modifiers,
             )
+            #depth = dist
+            depth = dist * distance_to_depth_modifiers
+            depth -= near
+            depth /= (far - near)
+            depth = 1 - depth
+            depth *= 255
             out_dir = "./e2e_output/test_rendering_depth_e2e_with_given_network/"
             os.makedirs(out_dir, exist_ok=True)
             imageio.imwrite(
-                out_dir + "output_" + image_src, dist.reshape((size, size)).numpy()
+                out_dir + "output_" + image_src, (depth - pixels.flatten()).abs().reshape((size, size)).t().fliplr().numpy()
+            )
+            expected_average_l1_depth_error = 0.05
+            average_l1_depth_error = torch.abs(depth - pixels.flatten()).sum() / batch_size
+            self.assertLess(
+                average_l1_depth_error,
+                expected_average_l1_depth_error,
+                f"expected avg depth error {average_l1_depth_error} to be smaller than {expected_average_l1_depth_error}",
             )
             """for x in tqdm(range(size)):
                 for y in range(size):

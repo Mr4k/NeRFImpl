@@ -9,14 +9,19 @@ from wandb_wrapper import wandb_init, wandb_log
 
 """
 Returns an arr of n sampling points
+
+batch_size: int
+n: int
+t_near: tensor dims = (batch_size)
+t_far: tensor dims = (batch_size)
 """
 
 
 def compute_stratified_sample_points(batch_size, n, t_near, t_far):
     bin_width = t_far - t_near
     return (
-        torch.tensor(t_near).repeat(batch_size, n)
-        + bin_width
+        torch.tensor(t_near).reshape(-1, 1).repeat(1, n)
+        + bin_width.reshape(-1, 1)
         * (torch.rand((batch_size, n)) + torch.arange(n).repeat(batch_size, 1))
         / n
     )
@@ -30,12 +35,23 @@ Returns a tuple (colors, opacity)
 def get_network_output(network, points, dirs):
     return network(points, dirs)
 
-
+"""
+network: TBD
+positions: tensor dims = (batch_size, 3)
+directions: tensor dims = (batch_size, 3)
+n: int
+t_near: tensor dims = (batch_size)
+t_far: tensor dims = (batch_size)
+"""
 def trace_ray(network, positions, directions, n, t_near, t_far):
     # TODO hmmm n + 1?
     batch_size = positions.shape[0]
 
     assert positions.shape[0] == directions.shape[0]
+    assert t_near.shape[0] == batch_size
+    assert len(t_near.shape) == 1
+    assert t_far.shape[0] == batch_size
+    assert len(t_far.shape) == 1
 
     stratified_sample_times = compute_stratified_sample_points(
         batch_size, n + 1, t_near, t_far
