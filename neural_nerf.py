@@ -66,4 +66,4 @@ class NerfModel(torch.nn.Module):
         )
         x = self.linear11(x)
         color = self.sigmoid_activation(x)
-        return density, color
+        return color, density

@@ -110,7 +110,7 @@ class TestNeuralNerfUnit(unittest.TestCase):
         model = NerfModel()
         pos_inputs = torch.rand([4096, 3])
         dir_inputs = torch.rand([4096, 3])
-        opacities, colors = model.forward(pos_inputs, dir_inputs)
+        colors, opacities = model.forward(pos_inputs, dir_inputs)
         self.assertEqual(opacities.shape, torch.Size([4096]))
         self.assertEqual(colors.shape, torch.Size([4096, 3]))
 

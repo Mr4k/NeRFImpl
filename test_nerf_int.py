@@ -12,6 +12,8 @@ from nerf import generate_rays, get_camera_position, load_config_file, trace_ray
 
 from tqdm import tqdm
 
+from neural_nerf import NerfModel
+
 
 def cube_network(points, dirs):
     num_points, _ = points.shape
@@ -140,6 +142,9 @@ class TestNerfInt(unittest.TestCase):
 
         batch_size = 4096
 
+        near = 0.5
+        far = 7
+
         transformation_matricies = []
         for f in frames:
             fov = torch.tensor(f["fov"])
@@ -148,12 +153,14 @@ class TestNerfInt(unittest.TestCase):
             ).t()
             transformation_matricies.append(transformation_matrix)
         camera_poses, rays, distance_to_depth_modifiers = sample_batch(
-            batch_size, 200, transformation_matricies, 45 * torch.pi / 180
+            batch_size, 200, transformation_matricies, fov
         )
-        depth, color = render_rays(
-            batch_size, camera_poses, rays, distance_to_depth_modifiers
+        model = NerfModel()
+        depth, colors = render_rays(
+            batch_size, camera_poses, rays, distance_to_depth_modifiers, near, far, model.forward
         )
-        pass
+        self.assertEqual(depth.shape, torch.Size([4096]))
+        self.assertEqual(colors.shape, torch.Size([4096, 3]))
 
 
 if __name__ == "__main__":
