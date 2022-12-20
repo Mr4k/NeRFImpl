@@ -4,12 +4,11 @@ import random
 
 from nerf import get_camera_position, generate_rays, trace_ray
 
+
 def render_image(size, transformation_matrix, fov, near, far, network):
     batch_size = size * size
     camera_poses = (
-        get_camera_position(transformation_matrix)
-        .reshape(1, -1)
-        .repeat(batch_size, 1)
+        get_camera_position(transformation_matrix).reshape(1, -1).repeat(batch_size, 1)
     )
 
     center_ray = generate_rays(
@@ -36,7 +35,10 @@ def render_image(size, transformation_matrix, fov, near, far, network):
 
     return depth, out_colors
 
-def render_rays(batch_size, camera_poses, rays, distance_to_depth_modifiers, near, far, network):
+
+def render_rays(
+    batch_size, camera_poses, rays, distance_to_depth_modifiers, near, far, network
+):
     out_colors, dist = trace_ray(
         network,
         camera_poses,
@@ -48,6 +50,7 @@ def render_rays(batch_size, camera_poses, rays, distance_to_depth_modifiers, nea
     depth = dist * distance_to_depth_modifiers
 
     return depth, out_colors
+
 
 def sample_batch(batch_size, size, transformation_matricies, fov):
     remaining_batch_size = batch_size
@@ -64,7 +67,7 @@ def sample_batch(batch_size, size, transformation_matricies, fov):
         chunk_size = random.randint(0, remaining_batch_size)
         if i == len(transformation_matricies) - 1:
             chunk_size = remaining_batch_size
-            
+
         remaining_batch_size -= chunk_size
 
         chunk_camera_poses = (
@@ -80,19 +83,22 @@ def sample_batch(batch_size, size, transformation_matricies, fov):
         xs = torch.arange(0, 1, 1.0 / size)
         ys = torch.arange(0, 1, 1.0 / size)
 
-        chunk_screen_points = torch.cartesian_prod(xs, ys)[torch.randperm(size * size)[0:chunk_size]] + torch.tensor(
-            [[0.5 / size, 0.5 / size]]
-        ).repeat(chunk_size, 1)
+        chunk_screen_points = torch.cartesian_prod(xs, ys)[
+            torch.randperm(size * size)[0:chunk_size]
+        ] + torch.tensor([[0.5 / size, 0.5 / size]]).repeat(chunk_size, 1)
 
-        chunk_rays = generate_rays(fov, transformation_matrix[:3, :3], chunk_screen_points, 1)
+        chunk_rays = generate_rays(
+            fov, transformation_matrix[:3, :3], chunk_screen_points, 1
+        )
 
-        chunk_distance_to_depth_modifiers = torch.matmul(chunk_rays, center_ray.t())[:, 0]
+        chunk_distance_to_depth_modifiers = torch.matmul(chunk_rays, center_ray.t())[
+            :, 0
+        ]
 
         batch_rays.append(chunk_rays)
         batch_distance_to_depth_modifiers.append(chunk_distance_to_depth_modifiers)
         batch_camera_poses.append(chunk_camera_poses)
 
-    
     rays = torch.concat(batch_rays, 0)
     distance_to_depth_modifiers = torch.concat(batch_distance_to_depth_modifiers, 0)
     camera_poses = torch.concat(batch_camera_poses, 0)

@@ -6,7 +6,7 @@ import imageio.v3 as iio
 import imageio
 
 import os
-from batch_and_sampler import render_image
+from batch_and_sampler import render_image, render_rays, sample_batch
 
 from nerf import generate_rays, get_camera_position, load_config_file, trace_ray
 
@@ -14,9 +14,9 @@ from tqdm import tqdm
 
 
 def cube_network(points, dirs):
-    batch_size, num_points, _ = points.shape
+    num_points, _ = points.shape
 
-    distances_from_origin, _ = torch.max(torch.abs(points), dim=2)
+    distances_from_origin, _ = torch.max(torch.abs(points), dim=1)
 
     color_pyramids = [
         {
@@ -51,10 +51,10 @@ def cube_network(points, dirs):
         },
     ]
 
-    opacity = torch.zeros((batch_size, num_points))
+    opacity = torch.zeros(num_points)
     opacity[distances_from_origin <= 1.0] = 10000
 
-    colors = torch.zeros((batch_size, num_points, 3))
+    colors = torch.zeros((num_points, 3))
 
     for pyramid in color_pyramids:
         height_axis = pyramid["height_axis"]
@@ -63,19 +63,15 @@ def cube_network(points, dirs):
 
         other_axes = [0, 1, 2]
         other_axes.remove(height_axis)
-        cond1 = points[:, :, height_axis] * height_axis_direction >= 0
-        cond2 = torch.abs(points[:, :, other_axes[0]]) <= torch.abs(
-            points[:, :, height_axis]
-        )
-        cond3 = torch.abs(points[:, :, other_axes[1]]) <= torch.abs(
-            points[:, :, height_axis]
-        )
+        cond1 = points[:, height_axis] * height_axis_direction >= 0
+        cond2 = torch.abs(points[:, other_axes[0]]) <= torch.abs(points[:, height_axis])
+        cond3 = torch.abs(points[:, other_axes[1]]) <= torch.abs(points[:, height_axis])
         colors[cond1 & cond2 & cond3, :] = color
 
     return colors, opacity
 
 
-class TestNerfUnit(unittest.TestCase):
+class TestNerfInt(unittest.TestCase):
     def test_rendering_depth_e2e_with_given_network(self):
         frames = load_config_file("./integration_test_data/cameras.json")
         near = 0.5
@@ -103,7 +99,9 @@ class TestNerfUnit(unittest.TestCase):
             )
             out_dir = "./e2e_output/test_rendering_depth_e2e_with_given_network/"
 
-            depth, out_colors = render_image(size, transformation_matrix, fov, near, far, cube_network)
+            depth, out_colors = render_image(
+                size, transformation_matrix, fov, near, far, cube_network
+            )
             normalized_depth = (depth - near) / (far - near)
             inverted_normalized_depth = 1 - normalized_depth
             out_depth = inverted_normalized_depth * 255
@@ -136,6 +134,26 @@ class TestNerfUnit(unittest.TestCase):
                 expected_p95_l1_depth_error,
                 f"expected p95 depth error {p95_l1_depth_error} to be smaller than {expected_p95_l1_depth_error}",
             )
+
+    def test_neural_nerf_render_e2e(self):
+        frames = load_config_file("./integration_test_data/cameras.json")
+
+        batch_size = 4096
+
+        transformation_matricies = []
+        for f in frames:
+            fov = torch.tensor(f["fov"])
+            transformation_matrix = torch.tensor(
+                f["transformation_matrix"], dtype=torch.float
+            ).t()
+            transformation_matricies.append(transformation_matrix)
+        camera_poses, rays, distance_to_depth_modifiers = sample_batch(
+            batch_size, 200, transformation_matricies, 45 * torch.pi / 180
+        )
+        depth, color = render_rays(
+            batch_size, camera_poses, rays, distance_to_depth_modifiers
+        )
+        pass
 
 
 if __name__ == "__main__":

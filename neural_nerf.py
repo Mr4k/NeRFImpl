@@ -16,7 +16,6 @@ def embed_tensor(points, l):
 
 
 class NerfModel(torch.nn.Module):
-
     def __init__(self):
         super(NerfModel, self).__init__()
 
@@ -62,7 +61,9 @@ class NerfModel(torch.nn.Module):
         x = self.linear9(x)
         x = self.relu_activation(x)
         density = x[:, 0]
-        x = self.linear10(torch.concat([x[:, 1:], embed_tensor(dir_input, self.l_dir)], dim=1))
+        x = self.linear10(
+            torch.concat([x[:, 1:], embed_tensor(dir_input, self.l_dir)], dim=1)
+        )
         x = self.linear11(x)
         color = self.sigmoid_activation(x)
         return density, color

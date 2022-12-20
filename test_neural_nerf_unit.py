@@ -105,7 +105,7 @@ class TestNeuralNerfUnit(unittest.TestCase):
         result = embed_tensor(p, 4)
         self.assertEqual(result.shape, torch.Size([2, 24]))
         self.assertLess((result - expected).abs().sum(), epsilon)
-    
+
     def test_neural_model_forward_pass(self):
         model = NerfModel()
         pos_inputs = torch.rand([4096, 3])
