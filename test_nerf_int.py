@@ -6,6 +6,7 @@ import imageio.v3 as iio
 import imageio
 
 import os
+from batch_and_sampler import render_image
 
 from nerf import generate_rays, get_camera_position, load_config_file, trace_ray
 
@@ -81,20 +82,13 @@ class TestNerfUnit(unittest.TestCase):
         frames = load_config_file("./integration_test_data/cameras.json")
         near = 0.5
         far = 7
+        size = 200
         for f in frames:
             fov = torch.tensor(f["fov"])
             transformation_matrix = torch.tensor(
                 f["transformation_matrix"], dtype=torch.float
             ).t()
             image_src = f["file_path"]
-
-            size = 200
-            batch_size = size * size
-            camera_poses = (
-                get_camera_position(transformation_matrix)
-                .reshape(1, -1)
-                .repeat(batch_size, 1)
-            )
 
             fname, _ = image_src.split(".png")
             ext = "png"
@@ -109,32 +103,12 @@ class TestNerfUnit(unittest.TestCase):
                 .flipud()
                 .float()
             )
+            out_dir = "./e2e_output/test_rendering_depth_e2e_with_given_network/"
 
-            center_ray = generate_rays(
-                fov, transformation_matrix[:3, :3], torch.tensor([[0.5, 0.5]]), 1
-            )
-
-            xs = torch.arange(0, 1, 1.0 / size)
-            ys = torch.arange(0, 1, 1.0 / size)
-            screen_points = torch.cartesian_prod(xs, ys) + torch.tensor(
-                [[0.5 / size, 0.5 / size]]
-            ).repeat(batch_size, 1)
-
-            rays = generate_rays(fov, transformation_matrix[:3, :3], screen_points, 1)
-            distance_to_depth_modifiers = torch.matmul(rays, center_ray.t())[:, 0]
-            out_colors, dist = trace_ray(
-                cube_network,
-                camera_poses,
-                rays,
-                100,
-                torch.tensor(near).repeat(batch_size) / distance_to_depth_modifiers,
-                torch.tensor(far).repeat(batch_size) / distance_to_depth_modifiers,
-            )
-            depth = dist * distance_to_depth_modifiers
+            depth, out_colors = render_image(size, transformation_matrix, fov, near, far, cube_network)
             normalized_depth = (depth - near) / (far - near)
             inverted_normalized_depth = 1 - normalized_depth
             out_depth = inverted_normalized_depth * 255
-            out_dir = "./e2e_output/test_rendering_depth_e2e_with_given_network/"
 
             expected_depth = (1 - pixels.flatten() / 255.0) * (far - near) + near
             l1_depth_error = torch.abs(depth - expected_depth)
