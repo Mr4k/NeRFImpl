@@ -15,8 +15,10 @@ class TestBatchAndSamplerUnit(unittest.TestCase):
             torch.rand([4, 4]),
             torch.rand([4, 4]),
         ]
-        result = sample_batch(4096, 200, matricies, 45 * torch.pi / 180, 0.1, 10)
-        self.assertEqual(result.shape, torch.Size([4096, 3]))
+        camera_poses, rays, distance_to_depth_modifiers = sample_batch(4096, 200, matricies, torch.tensor(45 * torch.pi / 180))
+        self.assertEqual(camera_poses.shape, torch.Size([4096, 3]))
+        self.assertEqual(rays.shape, torch.Size([4096, 3]))
+        self.assertEqual(distance_to_depth_modifiers.shape, torch.Size([4096]))
 
 if __name__ == "__main__":
     unittest.main()
