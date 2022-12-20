@@ -71,8 +71,6 @@ def cube_network(points, dirs):
             points[:, :, height_axis]
         )
         colors[cond1 & cond2 & cond3, :] = color
-    # sphere_ds = torch.norm(points, dim=2)
-    # colors[sphere_ds < 1.2, :] = torch.tensor([1.0, 1.0, 0.0])
 
     return colors, opacity
 
