@@ -1,7 +1,8 @@
+from statistics import mode
 import unittest
 import torch
 
-from neural_nerf import embed_tensor
+from neural_nerf import NerfModel, embed_tensor
 
 
 class TestNeuralNerfUnit(unittest.TestCase):
@@ -104,6 +105,14 @@ class TestNeuralNerfUnit(unittest.TestCase):
         result = embed_tensor(p, 4)
         self.assertEqual(result.shape, torch.Size([2, 24]))
         self.assertLess((result - expected).abs().sum(), epsilon)
+    
+    def test_neural_model_forward_pass(self):
+        model = NerfModel()
+        pos_inputs = torch.rand([4096, 3])
+        dir_inputs = torch.rand([4096, 3])
+        opacities, colors = model.forward(pos_inputs, dir_inputs)
+        self.assertEqual(opacities.shape, torch.Size([4096]))
+        self.assertEqual(colors.shape, torch.Size([4096, 3]))
 
 
 if __name__ == "__main__":
