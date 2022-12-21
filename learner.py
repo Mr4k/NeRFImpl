@@ -1,6 +1,6 @@
 import torch
 from batch_and_sampler import render_rays, sample_batch
-from matrix_math_utils import generate_rot_x, generate_translation
+from matrix_math_utils import generate_rot_x, generate_rot_z, generate_translation
 from nerf import load_config_file
 
 from neural_nerf import NerfModel
@@ -9,11 +9,6 @@ import imageio.v3 as iio
 import imageio
 
 import os
-
-
-def create_novel_gimbal_transformation_matrix(scale):
-    # TODO this function
-    pass
 
 
 def train():
