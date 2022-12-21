@@ -62,20 +62,21 @@ def train():
             print(f"rendering snapshot at step {step}")
             size = 100
             novel_view_transformation_matrix = generate_random_gimbal_transformation_matrix(1.0/scale)
-            depth_image, color_image = render_image(size, novel_view_transformation_matrix, fov, near, far, model.parameters())
+            depth_image, color_image = render_image(size, novel_view_transformation_matrix, fov, near, far, model)
             imageio.imwrite(
                 out_dir + f"depth_step_{step}.png",
-                (depth_image).reshape((size, size)).t().fliplr().numpy(),
+                (depth_image.detach()).reshape((size, size)).t().fliplr().numpy(),
             )
             imageio.imwrite(
                 out_dir + f"color_step_{step}.png",
-                (color_image * 255)
+                (color_image.detach() * 255)
                 .reshape((size, size, 3))
                 .transpose(0, 1)
                 .flip([1])
                 .numpy(),
             )
             print("saved snapshot")
+            optimizer.zero_grad()
 
 
         camera_poses, rays, distance_to_depth_modifiers, expected_colors = sample_batch(
