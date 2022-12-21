@@ -1,3 +1,4 @@
+from numpy import imag
 import torch
 
 import random
@@ -52,16 +53,19 @@ def render_rays(
     return depth, out_colors
 
 
-def sample_batch(batch_size, size, transformation_matricies, fov):
+def sample_batch(batch_size, size, transformation_matricies, images, fov):
+    print("hello:", images.shape)
     remaining_batch_size = batch_size
-    shuffled_transformation_matricies = list(transformation_matricies)
-    random.shuffle(transformation_matricies)
+    frame_perm = torch.randperm(len(transformation_matricies))
+    shuffled_transformation_matricies = transformation_matricies[frame_perm]
+    shuffled_images = images[frame_perm]
     # TODO the sampling strategy is not specified and I am lazy so we're going to try something simple
     # and dumb without thinking too much
     batch_rays = []
     batch_distance_to_depth_modifiers = []
     batch_camera_poses = []
-    for i, transformation_matrix in enumerate(shuffled_transformation_matricies):
+    batch_expected_colors = []
+    for i, (transformation_matrix, img) in enumerate(zip(shuffled_transformation_matricies, shuffled_images)):
         if remaining_batch_size <= 0:
             break
         chunk_size = random.randint(0, remaining_batch_size)
@@ -80,12 +84,20 @@ def sample_batch(batch_size, size, transformation_matricies, fov):
             fov, transformation_matrix[:3, :3], torch.tensor([[0.5, 0.5]]), 1
         )
 
-        xs = torch.arange(0, 1, 1.0 / size)
-        ys = torch.arange(0, 1, 1.0 / size)
+        xs = torch.arange(0, size, 1)
+        ys = torch.arange(0, size, 1)
 
-        chunk_screen_points = torch.cartesian_prod(xs, ys)[
-            torch.randperm(size * size)[0:chunk_size]
+        chunk_perm = torch.randperm(size * size)[0:chunk_size]
+
+        chunk_screen_points = torch.cartesian_prod(xs / float(size), ys / float(size))[
+            chunk_perm
         ] + torch.tensor([[0.5 / size, 0.5 / size]]).repeat(chunk_size, 1)
+
+        chunk_image_pixels = torch.cartesian_prod(xs, ys)[chunk_perm]
+
+        chunk_expected_colors = img[chunk_image_pixels[:, 0], chunk_image_pixels[:, 1], :]
+
+        batch_expected_colors.append(chunk_expected_colors)
 
         chunk_rays = generate_rays(
             fov, transformation_matrix[:3, :3], chunk_screen_points, 1
@@ -102,4 +114,5 @@ def sample_batch(batch_size, size, transformation_matricies, fov):
     rays = torch.concat(batch_rays, 0)
     distance_to_depth_modifiers = torch.concat(batch_distance_to_depth_modifiers, 0)
     camera_poses = torch.concat(batch_camera_poses, 0)
-    return camera_poses, rays, distance_to_depth_modifiers
+    expected_colors = torch.concat(batch_expected_colors, 0)
+    return camera_poses, rays, distance_to_depth_modifiers, expected_colors
