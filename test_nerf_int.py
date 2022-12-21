@@ -107,7 +107,8 @@ class TestNerfInt(unittest.TestCase):
                 .flip([0])
                 .float() / 255.0
             )
-            print("shaaaap:", color_pixels.shape)
+            color_pixels /= torch.max(color_pixels)
+            self.assertAlmostEqual(torch.max(color_pixels), 1.0, 3)
 
             out_dir = "./e2e_output/test_rendering_depth_e2e_with_given_network/"
 
@@ -141,7 +142,7 @@ class TestNerfInt(unittest.TestCase):
             )
             imageio.imwrite(
                 out_dir + "output_colors_diff" + color_image_src,
-                (color_pixels * 255)
+                (torch.abs(color_pixels.flatten() - out_colors.flatten()) * 255)
                 .reshape((size, size, 3))
                 .transpose(0, 1)
                 .flip([1])
@@ -176,6 +177,9 @@ class TestNerfInt(unittest.TestCase):
                     iio.imread(os.path.join("./idata/", image_src))
                 )[:, :, :3].transpose(0, 1).flip([0]).float() / 255.0
 
+            pixels /= torch.max(pixels)
+            self.assertAlmostEqual(torch.max(pixels), 1.0, 3)
+
             #pixels = torch.rand(pixels.shape)
             images.append(pixels)
             
@@ -192,21 +196,21 @@ class TestNerfInt(unittest.TestCase):
         results = torch.abs(expected_colors - colors)
 
         r_error = results[:, 0]
-        p95_r_error = torch.quantile(r_error, 0.85)
+        p95_r_error = torch.quantile(r_error, 0.97)
         self.assertLess(p95_r_error, 0.005)
 
         b_error = results[:, 0]
-        p95_b_error = torch.quantile(b_error, 0.85)
+        p95_b_error = torch.quantile(b_error, 0.97)
         self.assertLess(p95_b_error, 0.005)
 
         g_error = results[:, 0]
-        p95_g_error = torch.quantile(g_error, 0.85)
+        p95_g_error = torch.quantile(g_error, 0.97)
         self.assertLess(p95_g_error, 0.005)
 
     def test_neural_nerf_render_e2e(self):
         frames = load_config_file("./idata/cameras.json")
 
-        batch_size = 4096
+        batch_size = 4096 * 16
 
         near = 0.5
         far = 7

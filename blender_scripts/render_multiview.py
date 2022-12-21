@@ -128,17 +128,14 @@ for camera_object in scene.objects:
         # copy buffer to numpy array for faster manipulation
         arr = np.array(pixels[:])
         arr = arr.reshape((render_width, render_height, -1))[:, :, 0]
-        print(arr, np.min(arr), np.max(arr))
         arr[arr > max_depth] = max_depth
         arr[arr < min_depth] = min_depth
         arr -= min_depth
         arr /= max_depth - min_depth
         arr = (1.0 - arr) * 255
         arr = np.flip(arr, axis=0)
-        print(np.max(arr), np.min(arr))
         assert np.max(arr) <= 255
         assert np.min(arr) >= 0
-        print(arr.shape)
 
         cv2.imwrite(
             os.path.join(output_dir, "Camera_{}_depth.png".format(camera_object.name)),

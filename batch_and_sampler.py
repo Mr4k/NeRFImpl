@@ -54,7 +54,6 @@ def render_rays(
 
 
 def sample_batch(batch_size, size, transformation_matricies, images, fov):
-    print("hello:", images.shape)
     remaining_batch_size = batch_size
     frame_perm = torch.randperm(len(transformation_matricies))
     shuffled_transformation_matricies = transformation_matricies[frame_perm]
