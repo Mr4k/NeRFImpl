@@ -64,7 +64,9 @@ def sample_batch(batch_size, size, transformation_matricies, images, fov):
     batch_distance_to_depth_modifiers = []
     batch_camera_poses = []
     batch_expected_colors = []
-    for i, (transformation_matrix, img) in enumerate(zip(shuffled_transformation_matricies, shuffled_images)):
+    for i, (transformation_matrix, img) in enumerate(
+        zip(shuffled_transformation_matricies, shuffled_images)
+    ):
         if remaining_batch_size <= 0:
             break
         chunk_size = random.randint(0, remaining_batch_size)
@@ -94,7 +96,9 @@ def sample_batch(batch_size, size, transformation_matricies, images, fov):
 
         chunk_image_pixels = torch.cartesian_prod(xs, ys)[chunk_perm]
 
-        chunk_expected_colors = img[chunk_image_pixels[:, 0], chunk_image_pixels[:, 1], :]
+        chunk_expected_colors = img[
+            chunk_image_pixels[:, 0], chunk_image_pixels[:, 1], :
+        ]
 
         batch_expected_colors.append(chunk_expected_colors)
 

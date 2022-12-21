@@ -92,20 +92,19 @@ class TestNerfInt(unittest.TestCase):
             color_image_src = fname + "." + ext
 
             pixels = (
-                torch.tensor(
-                    iio.imread(os.path.join("./idata/", image_src))
-                )
+                torch.tensor(iio.imread(os.path.join("./idata/", image_src)))
                 .t()
                 .flipud()
                 .float()
             )
             color_pixels = (
-                torch.tensor(
-                    iio.imread(os.path.join("./idata/", color_image_src))
-                )[:, :, :3]
+                torch.tensor(iio.imread(os.path.join("./idata/", color_image_src)))[
+                    :, :, :3
+                ]
                 .transpose(0, 1)
                 .flip([0])
-                .float() / 255.0
+                .float()
+                / 255.0
             )
             color_pixels /= torch.max(color_pixels)
             self.assertAlmostEqual(torch.max(color_pixels), 1.0, 3)
@@ -173,20 +172,34 @@ class TestNerfInt(unittest.TestCase):
             ).t()
             transformation_matricies.append(transformation_matrix)
             image_src = f["file_path"]
-            pixels = torch.tensor(
-                    iio.imread(os.path.join("./idata/", image_src))
-                )[:, :, :3].transpose(0, 1).flip([0]).float() / 255.0
+            pixels = (
+                torch.tensor(iio.imread(os.path.join("./idata/", image_src)))[:, :, :3]
+                .transpose(0, 1)
+                .flip([0])
+                .float()
+                / 255.0
+            )
 
             pixels /= torch.max(pixels)
             self.assertAlmostEqual(torch.max(pixels), 1.0, 3)
 
             images.append(pixels)
-            
+
         camera_poses, rays, distance_to_depth_modifiers, expected_colors = sample_batch(
-            batch_size, 200, torch.stack(transformation_matricies), torch.stack(images), fov
+            batch_size,
+            200,
+            torch.stack(transformation_matricies),
+            torch.stack(images),
+            fov,
         )
         depth, colors = render_rays(
-            batch_size, camera_poses, rays, distance_to_depth_modifiers, near, far, cube_network
+            batch_size,
+            camera_poses,
+            rays,
+            distance_to_depth_modifiers,
+            near,
+            far,
+            cube_network,
         )
         self.assertEqual(depth.shape, torch.Size([4096]))
         self.assertEqual(colors.shape, torch.Size([4096, 3]))
@@ -225,9 +238,15 @@ class TestNerfInt(unittest.TestCase):
         camera_poses, rays, distance_to_depth_modifiers = sample_batch(
             batch_size, 200, transformation_matricies, fov
         )
-        model = NerfModel(1.0/5.0)
+        model = NerfModel(1.0 / 5.0)
         depth, colors = render_rays(
-            batch_size, camera_poses, rays, distance_to_depth_modifiers, near, far, model.forward
+            batch_size,
+            camera_poses,
+            rays,
+            distance_to_depth_modifiers,
+            near,
+            far,
+            model.forward,
         )
         self.assertEqual(depth.shape, torch.Size([4096]))
         self.assertEqual(colors.shape, torch.Size([4096, 3]))

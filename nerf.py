@@ -68,7 +68,9 @@ def trace_ray(network, positions, directions, n, t_near, t_far):
         + positions.reshape(batch_size, 1, -1).repeat(1, n + 1, 1)
     )
     colors, opacity = get_network_output(
-        network, stratified_sample_points.view(-1, 3), directions.repeat_interleave(n+1, dim=0)
+        network,
+        stratified_sample_points.view(-1, 3),
+        directions.repeat_interleave(n + 1, dim=0),
     )
     colors = colors.reshape(batch_size, n + 1, 3)
     opacity = opacity.reshape(batch_size, n + 1)
