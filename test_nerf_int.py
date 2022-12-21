@@ -180,7 +180,6 @@ class TestNerfInt(unittest.TestCase):
             pixels /= torch.max(pixels)
             self.assertAlmostEqual(torch.max(pixels), 1.0, 3)
 
-            #pixels = torch.rand(pixels.shape)
             images.append(pixels)
             
         camera_poses, rays, distance_to_depth_modifiers, expected_colors = sample_batch(
@@ -226,7 +225,7 @@ class TestNerfInt(unittest.TestCase):
         camera_poses, rays, distance_to_depth_modifiers = sample_batch(
             batch_size, 200, transformation_matricies, fov
         )
-        model = NerfModel()
+        model = NerfModel(1.0/5.0)
         depth, colors = render_rays(
             batch_size, camera_poses, rays, distance_to_depth_modifiers, near, far, model.forward
         )

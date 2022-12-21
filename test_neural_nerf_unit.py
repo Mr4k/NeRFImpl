@@ -107,7 +107,7 @@ class TestNeuralNerfUnit(unittest.TestCase):
         self.assertLess((result - expected).abs().sum(), epsilon)
 
     def test_neural_model_forward_pass(self):
-        model = NerfModel()
+        model = NerfModel(1.0/5.0)
         pos_inputs = torch.rand([4096, 3])
         dir_inputs = torch.rand([4096, 3])
         colors, opacities = model.forward(pos_inputs, dir_inputs)

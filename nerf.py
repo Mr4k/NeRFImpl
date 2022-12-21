@@ -122,6 +122,8 @@ def load_config_file(path):
 
 """
 fov: angle of field of view in radians
+# TODO note this is super funky, assuming orbiting camera setup and returns (-) direction camera rotation matrix should be pointing it in
+# Fix this whole system to work with generic cameras
 camera_transformation_matrix: a 3x3 matrix representing the rotation of the camera
 screen_points: (batch_size, 2), the locations of the pixels on the screen in [0, 1]^2
 aspect_ratio: width / height
