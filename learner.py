@@ -1,4 +1,4 @@
 import torch
 
-def train():
+def train(frames):
     pass

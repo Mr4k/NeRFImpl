@@ -1,3 +1,4 @@
+from matplotlib import scale
 import torch
 
 """
@@ -16,9 +17,10 @@ def embed_tensor(points, l):
 
 
 class NerfModel(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, scale):
         super(NerfModel, self).__init__()
 
+        self.scale = scale
         self.l_pos = 10
         self.l_dir = 4
 
@@ -41,7 +43,7 @@ class NerfModel(torch.nn.Module):
         self.sigmoid_activation = torch.nn.Sigmoid()
 
     def forward(self, pos_input, dir_input):
-        pos_embedding = embed_tensor(pos_input, self.l_pos)
+        pos_embedding = embed_tensor(pos_input / self.scale, self.l_pos)
         x = self.linear1(pos_embedding)
         x = self.relu_activation(x)
         x = self.linear2(x)
