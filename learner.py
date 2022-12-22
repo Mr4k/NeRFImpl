@@ -56,7 +56,7 @@ def train():
     optimizer = torch.optim.Adam(model.parameters(), 0.0005)
 
     num_steps = 100000
-    num_steps_to_render = 10
+    num_steps_to_render = 500
     for step in range(num_steps):
         if step % num_steps_to_render == 0:
             print(f"rendering snapshot at step {step}")
