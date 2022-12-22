@@ -10,4 +10,4 @@ wandb/
 
 e2e_output/
 
-./training_output
+training_output/
