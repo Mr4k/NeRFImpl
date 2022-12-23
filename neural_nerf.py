@@ -5,19 +5,20 @@ points: tensor dim = (num points, space_dim)
 """
 
 
-def embed_tensor(points, l):
+def embed_tensor(points, l, device):
     embeddings = points.repeat(1, l)
-    scalers = torch.pow(2, torch.arange(0, l, 1)).repeat_interleave(3)
+    scalers = torch.pow(2, torch.arange(0, l, 1)).repeat_interleave(3).to(device)
 
     # TODO unknown if this different ordering will be a problem with learning
-    sin_embeddings = torch.sin(embeddings * scalers[None, :] * torch.pi)
-    cos_embeddings = torch.cos(embeddings * scalers[None, :] * torch.pi)
-    return torch.concat([sin_embeddings, cos_embeddings], dim=1)
+    sin_embeddings = torch.sin(embeddings * scalers[None, :] * torch.pi).to(device)
+    cos_embeddings = torch.cos(embeddings * scalers[None, :] * torch.pi).to(device)
+    return torch.concat([sin_embeddings, cos_embeddings], dim=1).to(device)
 
 
 class NerfModel(torch.nn.Module):
-    def __init__(self, scale):
+    def __init__(self, scale, device):
         super(NerfModel, self).__init__()
+        self.device = device
 
         self.scale = scale
         self.l_pos = 10
@@ -42,7 +43,7 @@ class NerfModel(torch.nn.Module):
         self.sigmoid_activation = torch.nn.Sigmoid()
 
     def forward(self, pos_input, dir_input):
-        pos_embedding = embed_tensor(pos_input / self.scale, self.l_pos)
+        pos_embedding = embed_tensor(pos_input / self.scale, self.l_pos, self.device)
         x = self.linear1(pos_embedding)
         x = self.relu_activation(x)
         x = self.linear2(x)
