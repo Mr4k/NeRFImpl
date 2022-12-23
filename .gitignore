@@ -11,3 +11,5 @@ wandb/
 e2e_output/
 
 training_output/
+
+.zip

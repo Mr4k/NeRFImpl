@@ -68,7 +68,7 @@ def train():
     for step in range(num_steps):
         if step % num_steps_to_render == 0:
             print(f"rendering snapshot at step {step}")
-            size = 100
+            size = 64
             novel_view_transformation_matrix = generate_random_gimbal_transformation_matrix(1.0/scale)
             depth_image, color_image = render_image(size, novel_view_transformation_matrix, fov, near, far, model)
 
