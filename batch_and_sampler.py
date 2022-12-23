@@ -23,7 +23,7 @@ def render_image(size, transformation_matrix, fov, near, far, network, device):
 
     rays = generate_rays(fov, transformation_matrix[:3, :3], screen_points, 1)
     distance_to_depth_modifiers = torch.matmul(rays, center_ray.t())[:, 0]
-    render_rays(batch_size, camera_poses, rays, distance_to_depth_modifiers, near, far, network, device)
+    return render_rays(batch_size, camera_poses, rays, distance_to_depth_modifiers, near, far, network, device)
 
 
 def render_rays(
