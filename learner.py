@@ -75,11 +75,11 @@ def train():
     optimizer = torch.optim.Adam(model.parameters(), lr = 0.0005)
 
     num_steps = 100000
-    num_steps_to_render = 10
+    num_steps_to_render = 1000
     for step in range(num_steps):
         if step % num_steps_to_render == 0:
             print(f"rendering snapshot at step {step}")
-            size = 64
+            size = 200
             novel_view_transformation_matrix = generate_random_gimbal_transformation_matrix(scale)
             depth_image, color_image = render_image(size, novel_view_transformation_matrix, fov, near, far, model, device)
 
