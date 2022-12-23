@@ -10,7 +10,7 @@ from nerf import get_camera_position, generate_rays, trace_ray
 
 def render_image(size, transformation_matrix, fov, near, far, network, device):
     total_rays = size * size
-    batch_size = 2048
+    batch_size = 4096
     camera_poses = (
         get_camera_position(transformation_matrix).reshape(1, -1).repeat(total_rays, 1)
     )
