@@ -6,9 +6,10 @@ from nerf import get_camera_position, generate_rays, trace_ray
 
 
 def render_image(size, transformation_matrix, fov, near, far, network, device):
-    batch_size = size * size
+    total_rays = size * size
+    batch_size = 4096
     camera_poses = (
-        get_camera_position(transformation_matrix).reshape(1, -1).repeat(batch_size, 1)
+        get_camera_position(transformation_matrix).reshape(1, -1).repeat(total_rays, 1)
     )
 
     center_ray = generate_rays(
@@ -19,11 +20,25 @@ def render_image(size, transformation_matrix, fov, near, far, network, device):
     ys = torch.arange(0, 1, 1.0 / size)
     screen_points = torch.cartesian_prod(xs, ys) + torch.tensor(
         [[0.5 / size, 0.5 / size]]
-    ).repeat(batch_size, 1)
+    ).repeat(total_rays, 1)
+    
 
     rays = generate_rays(fov, transformation_matrix[:3, :3], screen_points, 1)
     distance_to_depth_modifiers = torch.matmul(rays, center_ray.t())[:, 0]
-    return render_rays(batch_size, camera_poses, rays, distance_to_depth_modifiers, near, far, network, device)
+
+    ray_batches = rays.split(batch_size)
+    distance_to_depth_modifiers_batches = distance_to_depth_modifiers.split(batch_size)
+    camera_pose_batches = camera_poses.split(batch_size)
+
+    batch_depths = []
+    batch_colors = []
+    for ray_batch, ddm_batch, camera_pos_batch in zip(ray_batches, distance_to_depth_modifiers_batches, camera_pose_batches):
+        num_rays = ray_batch.shape[0]
+        depths, colors = render_rays(num_rays, camera_pos_batch, ray_batch, ddm_batch, near, far, network, device)
+        batch_depths.append(depths)
+        batch_colors.append(colors)
+
+    return torch.concat(batch_depths, dim=0), torch.concat(batch_colors, dim=0)
 
 
 def render_rays(
