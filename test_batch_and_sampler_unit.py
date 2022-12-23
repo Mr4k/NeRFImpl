@@ -2,7 +2,7 @@ import torch
 
 import unittest
 
-from batch_and_sampler import sample_batch
+from batch_and_sampler import random_partition, sample_batch
 
 
 class TestBatchAndSamplerUnit(unittest.TestCase):
@@ -34,6 +34,14 @@ class TestBatchAndSamplerUnit(unittest.TestCase):
         self.assertEqual(distance_to_depth_modifiers.shape, torch.Size([batch_size]))
         self.assertEqual(expected_colors.shape, torch.Size([batch_size, 3]))
 
+    def test_random_partition_more_draws_than_items(self):
+        for _ in range(1000):
+            num_draws = torch.randint(10, 1000, [1]).item()
+            num_items = torch.randint(1, num_draws, [1]).item()
+            partition = random_partition(num_items, num_draws)
+            self.assertEqual(partition.shape, torch.Size([num_items]))
+            self.assertLessEqual(torch.max(partition), num_draws)
+            self.assertGreaterEqual(torch.min(partition), 0)
 
 if __name__ == "__main__":
     unittest.main()

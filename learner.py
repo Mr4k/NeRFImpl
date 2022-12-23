@@ -29,6 +29,7 @@ def train():
 
     training_run_id = uuid.uuid4()
     out_dir = f"./training_output/runs/{training_run_id}/"
+    train_data_path = "./data/cube/train"
 
     print(f"creating output dir: {out_dir}")
     os.makedirs(out_dir)
@@ -37,7 +38,7 @@ def train():
     scale = 5.0
     batch_size = 4096
 
-    frames = load_config_file("./data/cube/train/transforms_test.json")
+    frames = load_config_file(os.path.join(train_data_path, "transforms_test.json"))
     transformation_matricies = []
     images = []
     fov = None
@@ -49,7 +50,7 @@ def train():
         transformation_matricies.append(transformation_matrix)
         image_src = f["file_path"]
         pixels = (
-            torch.tensor(iio.imread(os.path.join("./data/cube/train/", image_src)))[
+            torch.tensor(iio.imread(os.path.join(train_data_path, image_src)))[
                 :, :, :3
             ]
             .transpose(0, 1)
@@ -62,17 +63,6 @@ def train():
 
         # sanity test learn a single color
         #pixels = torch.stack([torch.ones(200, 200) * 0.5, torch.ones(200, 200) * 0.5, torch.zeros(200, 200)], dim=-1)
-
-        # sanity test (sphere)
-        pixels = (
-            torch.tensor(iio.imread(os.path.join("./data/sphere.png")))[
-                :, :, :3
-            ]
-            .transpose(0, 1)
-            .flip([0])
-            .float()
-            / 255.0
-        )
 
         images.append(pixels)
 

@@ -1,4 +1,7 @@
+from numpy import dtype
 import torch
+
+from torch.distributions import Categorical
 
 import random
 
@@ -51,7 +54,7 @@ def render_rays(
         network,
         camera_poses,
         rays,
-        100,
+        150,
         nears,
         fars,
     )
@@ -59,9 +62,11 @@ def render_rays(
 
     return depth, out_colors
 
+def random_partition(num_catagories, num_draws):
+    cat = Categorical(torch.ones(num_catagories)/float(num_catagories))
+    return torch.histogram(cat.sample_n(num_draws).to(torch.float), bins=int(num_catagories))[0].to(torch.int)
 
 def sample_batch(batch_size, size, transformation_matricies, images, fov):
-    remaining_batch_size = batch_size
     frame_perm = torch.randperm(len(transformation_matricies))
     shuffled_transformation_matricies = transformation_matricies[frame_perm]
     shuffled_images = images[frame_perm]
@@ -71,21 +76,15 @@ def sample_batch(batch_size, size, transformation_matricies, images, fov):
     batch_distance_to_depth_modifiers = []
     batch_camera_poses = []
     batch_expected_colors = []
-    for i, (transformation_matrix, img) in enumerate(
-        zip(shuffled_transformation_matricies, shuffled_images)
+    chunk_sizes = random_partition(len(transformation_matricies), batch_size)
+    for i, (transformation_matrix, img, chnk_size) in enumerate(
+        zip(shuffled_transformation_matricies, shuffled_images, chunk_sizes)
     ):
-        if remaining_batch_size <= 0:
-            break
-        chunk_size = int(batch_size / len(shuffled_transformation_matricies))
-        if i == len(transformation_matricies) - 1:
-            chunk_size = remaining_batch_size
-
-        remaining_batch_size -= chunk_size
-
+        chnk_size = chnk_size.item()
         chunk_camera_poses = (
             get_camera_position(transformation_matrix)
             .reshape(1, -1)
-            .repeat(chunk_size, 1)
+            .repeat(chnk_size, 1)
         )
 
         center_ray = generate_rays(
@@ -95,11 +94,11 @@ def sample_batch(batch_size, size, transformation_matricies, images, fov):
         xs = torch.arange(0, size, 1)
         ys = torch.arange(0, size, 1)
 
-        chunk_perm = torch.randperm(size * size)[0:chunk_size]
+        chunk_perm = torch.randperm(size * size)[0:chnk_size]
 
         chunk_screen_points = torch.cartesian_prod(xs / float(size), ys / float(size))[
             chunk_perm
-        ] + torch.tensor([[0.5 / size, 0.5 / size]]).repeat(chunk_size, 1)
+        ] + torch.tensor([[0.5 / size, 0.5 / size]]).repeat(chnk_size, 1)
 
         chunk_image_pixels = torch.cartesian_prod(xs, ys)[chunk_perm]
 
