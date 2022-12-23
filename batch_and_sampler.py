@@ -61,7 +61,7 @@ def sample_batch(batch_size, size, transformation_matricies, images, fov):
     ):
         if remaining_batch_size <= 0:
             break
-        chunk_size = random.randint(0, remaining_batch_size)
+        chunk_size = int(batch_size / len(shuffled_transformation_matricies))
         if i == len(transformation_matricies) - 1:
             chunk_size = remaining_batch_size
 

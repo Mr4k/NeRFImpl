@@ -149,15 +149,3 @@ def generate_rays(fov, camera_rotation_matrix, screen_points, aspect_ratio=1):
 def get_camera_position(camera_transformation_matrix):
     ray = torch.tensor([[0, 0, 0, 1.0]])
     return torch.mm(ray, camera_transformation_matrix)[0, :3]
-
-
-"""@hydra.main(version_base=None, config_path=".", config_name="config")
-def nerf_main(cfg):
-    if cfg.wandb.enabled:
-        wandb_init(cfg)
-    wandb_log({"hello": 1})
-    torch.save(torch.rand((2, 2)), f"{HydraConfig.get().runtime.output_dir}/out.pth")"""
-
-
-if __name__ == "__main__":
-    nerf_main()

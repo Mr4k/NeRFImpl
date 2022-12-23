@@ -22,10 +22,10 @@ def train():
     if use_cuda:
         print("cuda acceleration available. Using cuda")
 
-    wandb_init({
+    """wandb_init({
         "entity": "mr4k",
         "project": "nerf"
-    })
+    })"""
 
     training_run_id = uuid.uuid4()
     out_dir = f"./training_output/runs/{training_run_id}/"
@@ -59,6 +59,24 @@ def train():
         )
 
         pixels /= torch.max(pixels)
+        print("s1:", pixels.shape)
+
+        # sanity test learn a single color
+        #pixels = torch.stack([torch.ones(200, 200) * 0.5, torch.ones(200, 200) * 0.5, torch.zeros(200, 200)], dim=-1)
+
+        # sanity test
+        pixels = (
+            torch.tensor(iio.imread(os.path.join("./data/sphere.png")))[
+                :, :, :3
+            ]
+            .transpose(0, 1)
+            .flip([0])
+            .float()
+            / 255.0
+        )
+
+
+        print("s2:", pixels.shape)
         images.append(pixels)
 
     near = 0.5
@@ -67,10 +85,10 @@ def train():
     loss_fn = lambda outputs, labels: ((outputs - labels) ** 2).sum()
     model = NerfModel(scale, device).to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), 0.0005)
+    optimizer = torch.optim.Adam(model.parameters(), lr = 0.0005)
 
     num_steps = 100000
-    num_steps_to_render = 1000
+    num_steps_to_render = 10
     for step in range(num_steps):
         if step % num_steps_to_render == 0:
             print(f"rendering snapshot at step {step}")

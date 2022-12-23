@@ -21,8 +21,8 @@ class NerfModel(torch.nn.Module):
         self.device = device
 
         self.scale = scale
-        self.l_pos = 10
-        self.l_dir = 4
+        self.l_pos = 2
+        self.l_dir = 2
 
         pos_input_dims = self.l_pos * 2 * 3
         dir_input_dims = self.l_dir * 2 * 3
@@ -61,8 +61,7 @@ class NerfModel(torch.nn.Module):
         x = self.linear8(x)
         x = self.relu_activation(x)
         x = self.linear9(x)
-        x = self.relu_activation(x)
-        density = x[:, 0]
+        density = self.relu_activation(x[:, 0])
         x = self.linear10(
             torch.concat([x[:, 1:], embed_tensor(dir_input, self.l_dir, self.device)], dim=1)
         )

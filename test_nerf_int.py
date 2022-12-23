@@ -12,62 +12,65 @@ from nerf import load_config_file
 from neural_nerf import NerfModel
 
 
-def cube_network(points, dirs):
-    num_points, _ = points.shape
+class CubeNetwork:
+    def to(self, _):
+        return self
+    def __call__(self, points, dirs):
+        num_points, _ = points.shape
 
-    distances_from_origin, _ = torch.max(torch.abs(points), dim=1)
+        distances_from_origin, _ = torch.max(torch.abs(points), dim=1)
 
-    color_pyramids = [
-        {
-            "height_axis": 2,
-            "height_axis_direction": 1,
-            "color": torch.tensor([1.0, 0.0, 0.0]),
-        },
-        {
-            "height_axis": 2,
-            "height_axis_direction": -1,
-            "color": torch.tensor([1.0, 0.0, 1.0]),
-        },
-        {
-            "height_axis": 1,
-            "height_axis_direction": 1,
-            "color": torch.tensor([0.0, 1.0, 1.0]),
-        },
-        {
-            "height_axis": 1,
-            "height_axis_direction": -1,
-            "color": torch.tensor([0.0, 1.0, 0.0]),
-        },
-        {
-            "height_axis": 0,
-            "height_axis_direction": 1,
-            "color": torch.tensor([0.0, 0.0, 1.0]),
-        },
-        {
-            "height_axis": 0,
-            "height_axis_direction": -1,
-            "color": torch.tensor([1.0, 1.0, 0.0]),
-        },
-    ]
+        color_pyramids = [
+            {
+                "height_axis": 2,
+                "height_axis_direction": 1,
+                "color": torch.tensor([1.0, 0.0, 0.0]),
+            },
+            {
+                "height_axis": 2,
+                "height_axis_direction": -1,
+                "color": torch.tensor([1.0, 0.0, 1.0]),
+            },
+            {
+                "height_axis": 1,
+                "height_axis_direction": 1,
+                "color": torch.tensor([0.0, 1.0, 1.0]),
+            },
+            {
+                "height_axis": 1,
+                "height_axis_direction": -1,
+                "color": torch.tensor([0.0, 1.0, 0.0]),
+            },
+            {
+                "height_axis": 0,
+                "height_axis_direction": 1,
+                "color": torch.tensor([0.0, 0.0, 1.0]),
+            },
+            {
+                "height_axis": 0,
+                "height_axis_direction": -1,
+                "color": torch.tensor([1.0, 1.0, 0.0]),
+            },
+        ]
 
-    opacity = torch.zeros(num_points)
-    opacity[distances_from_origin <= 1.0] = 10000
+        opacity = torch.zeros(num_points)
+        opacity[distances_from_origin <= 1.0] = 10000
 
-    colors = torch.zeros((num_points, 3))
+        colors = torch.zeros((num_points, 3))
 
-    for pyramid in color_pyramids:
-        height_axis = pyramid["height_axis"]
-        height_axis_direction = pyramid["height_axis_direction"]
-        color = pyramid["color"]
+        for pyramid in color_pyramids:
+            height_axis = pyramid["height_axis"]
+            height_axis_direction = pyramid["height_axis_direction"]
+            color = pyramid["color"]
 
-        other_axes = [0, 1, 2]
-        other_axes.remove(height_axis)
-        cond1 = points[:, height_axis] * height_axis_direction >= 0
-        cond2 = torch.abs(points[:, other_axes[0]]) <= torch.abs(points[:, height_axis])
-        cond3 = torch.abs(points[:, other_axes[1]]) <= torch.abs(points[:, height_axis])
-        colors[cond1 & cond2 & cond3, :] = color
+            other_axes = [0, 1, 2]
+            other_axes.remove(height_axis)
+            cond1 = points[:, height_axis] * height_axis_direction >= 0
+            cond2 = torch.abs(points[:, other_axes[0]]) <= torch.abs(points[:, height_axis])
+            cond3 = torch.abs(points[:, other_axes[1]]) <= torch.abs(points[:, height_axis])
+            colors[cond1 & cond2 & cond3, :] = color
 
-    return colors, opacity
+        return colors, opacity
 
 
 class TestNerfInt(unittest.TestCase):
@@ -109,7 +112,7 @@ class TestNerfInt(unittest.TestCase):
             out_dir = "./e2e_output/test_rendering_depth_e2e_with_given_network/"
 
             depth, out_colors = render_image(
-                size, transformation_matrix, fov, near, far, cube_network
+                size, transformation_matrix, fov, near, far, CubeNetwork(), "cpu"
             )
             normalized_depth = (depth - near) / (far - near)
             inverted_normalized_depth = 1 - normalized_depth
