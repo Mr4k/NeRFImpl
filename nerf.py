@@ -16,7 +16,7 @@ t_far: tensor dims = (batch_size)
 def compute_stratified_sample_points(batch_size, n, t_near, t_far):
     bin_width = t_far - t_near
     return (
-        t_near.reshape(-1, 1).repeat(1, n)
+        torch.tensor(t_near).reshape(-1, 1).repeat(1, n)
         + bin_width.reshape(-1, 1)
         * (torch.rand((batch_size, n)) + torch.arange(n).repeat(batch_size, 1))
         / n
