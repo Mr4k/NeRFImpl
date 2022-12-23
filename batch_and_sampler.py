@@ -54,7 +54,7 @@ def render_rays(
         network,
         camera_poses,
         rays,
-        150,
+        100,
         nears,
         fars,
     )
