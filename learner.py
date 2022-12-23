@@ -65,7 +65,7 @@ def train():
     far = 7
 
     loss_fn = lambda outputs, labels: ((outputs - labels) ** 2).sum()
-    model = NerfModel(scale)
+    model = NerfModel(scale).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), 0.0005)
 

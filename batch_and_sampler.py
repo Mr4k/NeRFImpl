@@ -32,12 +32,13 @@ def render_rays(
     nears = torch.tensor(near).repeat(batch_size) / distance_to_depth_modifiers
     fars = torch.tensor(far).repeat(batch_size) / distance_to_depth_modifiers
     out_colors, dist = trace_ray(
-        network.to(device),
-        camera_poses.to(device),
-        rays.to(device),
+        device,
+        network,
+        camera_poses,
+        rays,
         100,
-        nears.to(device),
-        fars.to(device),
+        nears,
+        fars,
     )
     depth = dist * distance_to_depth_modifiers
 

@@ -16,7 +16,7 @@ t_far: tensor dims = (batch_size)
 def compute_stratified_sample_points(batch_size, n, t_near, t_far):
     bin_width = t_far - t_near
     return (
-        torch.tensor(t_near).reshape(-1, 1).repeat(1, n)
+        t_near.reshape(-1, 1).repeat(1, n)
         + bin_width.reshape(-1, 1)
         * (torch.rand((batch_size, n)) + torch.arange(n).repeat(batch_size, 1))
         / n
@@ -42,7 +42,7 @@ t_far: tensor dims = (batch_size)
 """
 
 
-def trace_ray(network, positions, directions, n, t_near, t_far):
+def trace_ray(device, network, positions, directions, n, t_near, t_far):
     # TODO hmmm n + 1?
     batch_size = positions.shape[0]
 
@@ -63,13 +63,15 @@ def trace_ray(network, positions, directions, n, t_near, t_far):
         stratified_sample_points_centered_at_the_origin
         + positions.reshape(batch_size, 1, -1).repeat(1, n + 1, 1)
     )
+
+    # tiny cuda region at first
     colors, opacity = get_network_output(
-        network,
-        stratified_sample_points.view(-1, 3),
-        directions.repeat_interleave(n + 1, dim=0),
+        network.to(device),
+        stratified_sample_points.view(-1, 3).to(device),
+        directions.repeat_interleave(n + 1, dim=0).to(device),
     )
-    colors = colors.reshape(batch_size, n + 1, 3)
-    opacity = opacity.reshape(batch_size, n + 1)
+    colors = colors.cpu().reshape(batch_size, n + 1, 3)
+    opacity = opacity.cpu().reshape(batch_size, n + 1)
 
     cum_partial_passthrough_sum = torch.zeros(batch_size)
     cum_color = torch.zeros((batch_size, 3))
