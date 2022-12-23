@@ -1,5 +1,6 @@
 import uuid
 import torch
+import wandb
 from batch_and_sampler import render_image, render_rays, sample_batch
 from matrix_math_utils import generate_random_gimbal_transformation_matrix, generate_rot_x, generate_rot_z, generate_translation
 from nerf import load_config_file
@@ -11,8 +12,15 @@ import imageio
 
 import os
 
+from wandb_wrapper import wandb_init, wandb_log
+
 
 def train():
+    wandb_init({
+        "entity": "mr4k",
+        "project": "nerf"
+    })
+
     training_run_id = uuid.uuid4()
     out_dir = f"./training_output/runs/{training_run_id}/"
 
@@ -56,26 +64,26 @@ def train():
     optimizer = torch.optim.Adam(model.parameters(), 0.0005)
 
     num_steps = 100000
-    num_steps_to_render = 500
+    num_steps_to_render = 1000
     for step in range(num_steps):
         if step % num_steps_to_render == 0:
             print(f"rendering snapshot at step {step}")
             size = 100
             novel_view_transformation_matrix = generate_random_gimbal_transformation_matrix(1.0/scale)
             depth_image, color_image = render_image(size, novel_view_transformation_matrix, fov, near, far, model)
+
+            out_depth_image = (depth_image.cpu().detach()).reshape((size, size)).t().fliplr().numpy()
+            out_color_image = (color_image.cpu().detach() * 255).reshape((size, size, 3)).transpose(0, 1).flip([1]).numpy()
             imageio.imwrite(
                 out_dir + f"depth_step_{step}.png",
-                (depth_image.detach()).reshape((size, size)).t().fliplr().numpy(),
+                out_depth_image
             )
             imageio.imwrite(
                 out_dir + f"color_step_{step}.png",
-                (color_image.detach() * 255)
-                .reshape((size, size, 3))
-                .transpose(0, 1)
-                .flip([1])
-                .numpy(),
+                out_color_image,
             )
             print("saved snapshot")
+            #wandb_log({"random_gimbal_view_color": wandb.Image(out_color_image, mode="RGB"), "random_gimbal_view_depth": wandb.Image(out_depth_image)})
             optimizer.zero_grad()
 
 
@@ -103,7 +111,9 @@ def train():
         loss.backward()
 
         optimizer.step()
-        print(f"loss at step {step}: {loss.item()}")
+        loss_at_step = loss.item()
+        print(f"loss at step {step}: {loss_at_step}")
+        wandb_log({"loss": loss_at_step, "step": step})
 
 
 if __name__ == "__main__":

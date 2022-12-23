@@ -7,8 +7,8 @@ _logging_enabled = False
 def wandb_init(config):
     global _logging_enabled
     _ = wandb.init(
-        entity=config.wandb.entity,
-        project=config.wandb.project,
+        entity=config["entity"],
+        project=config["project"],
         settings=wandb.Settings(start_method="thread"),
         config=wandb.config,
     )
