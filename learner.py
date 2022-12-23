@@ -22,10 +22,10 @@ def train():
     if use_cuda:
         print("cuda acceleration available. Using cuda")
 
-    """wandb_init({
+    wandb_init({
         "entity": "mr4k",
         "project": "nerf"
-    })"""
+    })
 
     training_run_id = uuid.uuid4()
     out_dir = f"./training_output/runs/{training_run_id}/"
