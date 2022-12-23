@@ -16,6 +16,12 @@ from wandb_wrapper import wandb_init, wandb_log
 
 
 def train():
+    use_cuda = torch.cuda.is_available()
+    device = torch.device("cuda" if use_cuda else "cpu")
+
+    if use_cuda:
+        print("cuda acceleration available. Using cuda")
+
     wandb_init({
         "entity": "mr4k",
         "project": "nerf"
@@ -70,7 +76,7 @@ def train():
             print(f"rendering snapshot at step {step}")
             size = 64
             novel_view_transformation_matrix = generate_random_gimbal_transformation_matrix(1.0/scale)
-            depth_image, color_image = render_image(size, novel_view_transformation_matrix, fov, near, far, model)
+            depth_image, color_image = render_image(size, novel_view_transformation_matrix, fov, near, far, model, device)
 
             out_depth_image = (depth_image.cpu().detach()).reshape((size, size)).t().fliplr().numpy()
             out_color_image = (color_image.cpu().detach() * 255).reshape((size, size, 3)).transpose(0, 1).flip([1]).numpy()

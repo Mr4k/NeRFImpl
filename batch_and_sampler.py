@@ -5,7 +5,7 @@ import random
 from nerf import get_camera_position, generate_rays, trace_ray
 
 
-def render_image(size, transformation_matrix, fov, near, far, network):
+def render_image(size, transformation_matrix, fov, near, far, network, device):
     batch_size = size * size
     camera_poses = (
         get_camera_position(transformation_matrix).reshape(1, -1).repeat(batch_size, 1)
@@ -23,29 +23,21 @@ def render_image(size, transformation_matrix, fov, near, far, network):
 
     rays = generate_rays(fov, transformation_matrix[:3, :3], screen_points, 1)
     distance_to_depth_modifiers = torch.matmul(rays, center_ray.t())[:, 0]
-    out_colors, dist = trace_ray(
-        network,
-        camera_poses,
-        rays,
-        100,
-        torch.tensor(near).repeat(batch_size) / distance_to_depth_modifiers,
-        torch.tensor(far).repeat(batch_size) / distance_to_depth_modifiers,
-    )
-    depth = dist * distance_to_depth_modifiers
-
-    return depth, out_colors
+    render_rays(batch_size, camera_poses, rays, distance_to_depth_modifiers, near, far, network, device)
 
 
 def render_rays(
-    batch_size, camera_poses, rays, distance_to_depth_modifiers, near, far, network
+    batch_size, camera_poses, rays, distance_to_depth_modifiers, near, far, network, device
 ):
+    nears = torch.tensor(near).repeat(batch_size) / distance_to_depth_modifiers
+    fars = torch.tensor(far).repeat(batch_size) / distance_to_depth_modifiers
     out_colors, dist = trace_ray(
-        network,
-        camera_poses,
-        rays,
+        network.to(device),
+        camera_poses.to(device),
+        rays.to(device),
         100,
-        torch.tensor(near).repeat(batch_size) / distance_to_depth_modifiers,
-        torch.tensor(far).repeat(batch_size) / distance_to_depth_modifiers,
+        nears.to(device),
+        fars.to(device),
     )
     depth = dist * distance_to_depth_modifiers
 
