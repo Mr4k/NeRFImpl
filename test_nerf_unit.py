@@ -34,18 +34,22 @@ class TestNerfUnit(unittest.TestCase):
 
             camera_pos = torch.rand((batch_size, 3)) * 100
 
-            def distance_network(points, dirs):
-                num_points, _ = points.shape
-                distances = (
-                    points - camera_pos.repeat_interleave(num_samples + 1, 0)
-                ).norm(dim=1)
-                opacity = torch.zeros((num_points))
-                opacity[distances >= solid_distance] = 10000
-                colors = torch.zeros((num_points, 3))
-                return colors, opacity
+            class DistanceNetwork():
+                def to(self, _):
+                    return self
+                def __call__(self, points, dirs):
+                    num_points, _ = points.shape
+                    distances = (
+                        points - camera_pos.repeat_interleave(num_samples + 1, 0)
+                    ).norm(dim=1)
+                    opacity = torch.zeros((num_points))
+                    opacity[distances >= solid_distance] = 10000
+                    colors = torch.zeros((num_points, 3))
+                    return colors, opacity
 
             _, out_distances = trace_ray(
-                distance_network,
+                "cpu",
+                DistanceNetwork(),
                 camera_pos,
                 dirs,
                 num_samples,
@@ -61,15 +65,19 @@ class TestNerfUnit(unittest.TestCase):
 
         camera_poses = torch.tensor([[2, 2, 3]])
 
-        def distance_network(points, dirs):
-            batch_size, _ = points.shape
+        class DistanceNetwork():
+            def to(self, _):
+                return self
+            def __call__(self, points, dirs):
+                batch_size, _ = points.shape
 
-            opacity = torch.zeros((batch_size))
-            colors = torch.zeros((batch_size, 3))
-            return colors, opacity
+                opacity = torch.zeros((batch_size))
+                colors = torch.zeros((batch_size, 3))
+                return colors, opacity
 
         _, distance = trace_ray(
-            distance_network,
+            "cpu",
+            DistanceNetwork(),
             camera_poses,
             dirs,
             100,
@@ -84,15 +92,19 @@ class TestNerfUnit(unittest.TestCase):
         camera_poses = torch.tensor([[2, 2, 3]])
         t_near = 30.0
 
-        def distance_network(points, dirs):
-            batch_size, _ = points.shape
+        class DistanceNetwork():
+            def to(self, _):
+                return self
+            def __call__(self, points, dirs):
+                batch_size, _ = points.shape
 
-            opacity = torch.ones((batch_size)) * 10000
-            colors = torch.zeros((batch_size, 3))
-            return colors, opacity
+                opacity = torch.ones((batch_size)) * 10000
+                colors = torch.zeros((batch_size, 3))
+                return colors, opacity
 
         _, distance = trace_ray(
-            distance_network,
+            "cpu",
+            DistanceNetwork(),
             camera_poses,
             dirs,
             100,
