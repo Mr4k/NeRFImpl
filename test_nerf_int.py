@@ -1,5 +1,4 @@
 import unittest
-from numpy import average
 import torch
 
 import imageio.v3 as iio
@@ -9,8 +8,6 @@ import os
 from batch_and_sampler import render_image, render_rays, sample_batch
 
 from nerf import load_config_file
-
-from tqdm import tqdm
 
 from neural_nerf import NerfModel
 

@@ -1,5 +1,4 @@
 import wandb
-from omegaconf import OmegaConf
 
 _logging_enabled = False
 
