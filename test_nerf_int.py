@@ -199,7 +199,8 @@ class TestNerfInt(unittest.TestCase):
             distance_to_depth_modifiers,
             near,
             far,
-            cube_network,
+            CubeNetwork(),
+            "cpu"
         )
         self.assertEqual(depth.shape, torch.Size([4096]))
         self.assertEqual(colors.shape, torch.Size([4096, 3]))
@@ -222,23 +223,37 @@ class TestNerfInt(unittest.TestCase):
     def test_neural_nerf_render_e2e(self):
         frames = load_config_file("./idata/cameras.json")
 
-        batch_size = 4096 * 16
+        batch_size = 4096
 
         near = 0.5
         far = 7
 
         transformation_matricies = []
+        images = []
         for f in frames:
             fov = torch.tensor(f["fov"])
             transformation_matrix = torch.tensor(
                 f["transformation_matrix"], dtype=torch.float
             ).t()
             transformation_matricies.append(transformation_matrix)
+            image_src = f["file_path"]
+            pixels = (
+                torch.tensor(iio.imread(os.path.join("./idata/", image_src)))[:, :, :3]
+                .transpose(0, 1)
+                .flip([0])
+                .float()
+                / 255.0
+            )
 
-        camera_poses, rays, distance_to_depth_modifiers = sample_batch(
-            batch_size, 200, transformation_matricies, fov
+            pixels /= torch.max(pixels)
+            self.assertAlmostEqual(torch.max(pixels), 1.0, 3)
+
+            images.append(pixels)
+
+        camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
+            batch_size, 200, torch.stack(transformation_matricies), torch.stack(images), fov
         )
-        model = NerfModel(1.0 / 5.0)
+        model = NerfModel(5.0, "cpu")
         depth, colors = render_rays(
             batch_size,
             camera_poses,
@@ -246,7 +261,8 @@ class TestNerfInt(unittest.TestCase):
             distance_to_depth_modifiers,
             near,
             far,
-            model.forward,
+            model,
+            "cpu"
         )
         self.assertEqual(depth.shape, torch.Size([4096]))
         self.assertEqual(colors.shape, torch.Size([4096, 3]))

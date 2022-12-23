@@ -62,8 +62,9 @@ class NerfModel(torch.nn.Module):
         x = self.relu_activation(x)
         x = self.linear9(x)
         density = self.relu_activation(x[:, 0])
+        dir_input = embed_tensor(dir_input, self.l_dir, self.device)
         x = self.linear10(
-            torch.concat([x[:, 1:], embed_tensor(dir_input, self.l_dir, self.device)], dim=1)
+            torch.concat([x[:, 1:], dir_input], dim=1)
         )
         x = self.linear11(x)
         color = self.sigmoid_activation(x)

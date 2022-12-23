@@ -34,7 +34,7 @@ def train():
     os.makedirs(out_dir)
 
     # (batch size, 3)
-    scale = 1.0 / 5.0
+    scale = 5.0
     batch_size = 4096
 
     frames = load_config_file("./data/cube/train/transforms_test.json")
@@ -59,12 +59,11 @@ def train():
         )
 
         pixels /= torch.max(pixels)
-        print("s1:", pixels.shape)
 
         # sanity test learn a single color
         #pixels = torch.stack([torch.ones(200, 200) * 0.5, torch.ones(200, 200) * 0.5, torch.zeros(200, 200)], dim=-1)
 
-        # sanity test
+        # sanity test (sphere)
         pixels = (
             torch.tensor(iio.imread(os.path.join("./data/sphere.png")))[
                 :, :, :3
@@ -75,8 +74,6 @@ def train():
             / 255.0
         )
 
-
-        print("s2:", pixels.shape)
         images.append(pixels)
 
     near = 0.5
@@ -93,10 +90,10 @@ def train():
         if step % num_steps_to_render == 0:
             print(f"rendering snapshot at step {step}")
             size = 64
-            novel_view_transformation_matrix = generate_random_gimbal_transformation_matrix(1.0/scale)
+            novel_view_transformation_matrix = generate_random_gimbal_transformation_matrix(scale)
             depth_image, color_image = render_image(size, novel_view_transformation_matrix, fov, near, far, model, device)
 
-            out_depth_image = (depth_image.cpu().detach()).reshape((size, size)).t().fliplr().numpy()
+            out_depth_image = (1.0 - ((depth_image.cpu().detach()).reshape((size, size)).t().fliplr().numpy() - near) / (far - near)) * 255
             out_color_image = (color_image.cpu().detach() * 255).reshape((size, size, 3)).transpose(0, 1).flip([1]).numpy()
             imageio.imwrite(
                 out_dir + f"depth_step_{step}.png",
