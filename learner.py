@@ -111,6 +111,7 @@ def train():
             near,
             far,
             model,
+            device,
         )
 
         loss = loss_fn(colors.flatten(), expected_colors.flatten())
