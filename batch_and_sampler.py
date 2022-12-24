@@ -37,7 +37,6 @@ def render_image(size, transformation_matrix, fov, near, far, network, device):
     batch_colors = []
     for ray_batch, ddm_batch, camera_pos_batch in zip(ray_batches, distance_to_depth_modifiers_batches, camera_pose_batches):
         num_rays = ray_batch.shape[0]
-        print("batch rays:", num_rays)
         depths, colors = render_rays(num_rays, camera_pos_batch, ray_batch, ddm_batch, near, far, network, device)
         batch_depths.append(depths)
         batch_colors.append(colors)

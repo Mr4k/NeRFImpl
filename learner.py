@@ -75,29 +75,31 @@ def train():
     optimizer = torch.optim.Adam(model.parameters(), lr = 0.0005)
 
     num_steps = 100000
-    num_steps_to_render = 1000
+    num_steps_to_render = 100
+    novel_view_transformation_matricies = [generate_random_gimbal_transformation_matrix(scale) for _ in range(10)]
     for step in range(num_steps):
         if step % num_steps_to_render == 0:
-            print(f"rendering snapshot at step {step}")
-            size = 200
-            novel_view_transformation_matrix = generate_random_gimbal_transformation_matrix(scale)
-            with torch.no_grad():
-                depth_image, color_image = render_image(size, novel_view_transformation_matrix, fov, near, far, model, device)
+            for i, novel_view_transformation_matrix in enumerate(novel_view_transformation_matricies):
+                print(f"rendering snapshot from view {i} at step {step}")
+                size = 200
+                
+                with torch.no_grad():
+                    depth_image, color_image = render_image(size, novel_view_transformation_matrix, fov, near, far, model, device)
 
-            out_depth_image = (1.0 - ((depth_image.cpu().detach()).reshape((size, size)).t().fliplr().numpy() - near) / (far - near)) * 255
-            out_color_image = (color_image.cpu().detach() * 255).reshape((size, size, 3)).transpose(0, 1).flip([1]).numpy()
-            imageio.imwrite(
-                out_dir + f"depth_step_{step}.png",
-                out_depth_image
-            )
-            imageio.imwrite(
-                out_dir + f"color_step_{step}.png",
-                out_color_image,
-            )
-            print("saved snapshot")
-            #wandb_log({"random_gimbal_view_color": wandb.Image(out_color_image, mode="RGB"), "random_gimbal_view_depth": wandb.Image(out_depth_image)})
-            optimizer.zero_grad()
-
+                out_depth_image = (1.0 - ((depth_image.cpu().detach()).reshape((size, size)).t().fliplr().numpy() - near) / (far - near)) * 255
+                out_color_image = (color_image.cpu().detach() * 255).reshape((size, size, 3)).transpose(0, 1).flip([1]).numpy()
+                imageio.imwrite(
+                    out_dir + f"depth_step_{step}.png",
+                    out_depth_image
+                )
+                imageio.imwrite(
+                    out_dir + f"color_step_{step}.png",
+                    out_color_image,
+                )
+                print("saved snapshot")
+                #wandb_log({"random_gimbal_view_color": wandb.Image(out_color_image, mode="RGB"), "random_gimbal_view_depth": wandb.Image(out_depth_image)})
+        
+        optimizer.zero_grad()
 
         camera_poses, rays, distance_to_depth_modifiers, expected_colors = sample_batch(
             batch_size,
