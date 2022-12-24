@@ -81,7 +81,8 @@ def train():
             print(f"rendering snapshot at step {step}")
             size = 200
             novel_view_transformation_matrix = generate_random_gimbal_transformation_matrix(scale)
-            depth_image, color_image = render_image(size, novel_view_transformation_matrix, fov, near, far, model, device)
+            with torch.no_grad():
+                depth_image, color_image = render_image(size, novel_view_transformation_matrix, fov, near, far, model, device)
 
             out_depth_image = (1.0 - ((depth_image.cpu().detach()).reshape((size, size)).t().fliplr().numpy() - near) / (far - near)) * 255
             out_color_image = (color_image.cpu().detach() * 255).reshape((size, size, 3)).transpose(0, 1).flip([1]).numpy()
