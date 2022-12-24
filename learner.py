@@ -89,11 +89,11 @@ def train():
                 out_depth_image = (1.0 - ((depth_image.cpu().detach()).reshape((size, size)).t().fliplr().numpy() - near) / (far - near)) * 255
                 out_color_image = (color_image.cpu().detach() * 255).reshape((size, size, 3)).transpose(0, 1).flip([1]).numpy()
                 imageio.imwrite(
-                    out_dir + f"depth_step_{step}.png",
+                    out_dir + f"view_{i}_depth_step_{step}.png",
                     out_depth_image
                 )
                 imageio.imwrite(
-                    out_dir + f"color_step_{step}.png",
+                    out_dir + f"view_{i}_color_step_{step}.png",
                     out_color_image,
                 )
                 print("saved snapshot")
