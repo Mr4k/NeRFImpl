@@ -31,7 +31,7 @@ def train():
 
     training_run_id = uuid.uuid4()
     out_dir = f"./training_output/runs/{training_run_id}/"
-    train_data_path = "./data/monkey/train"
+    train_data_path = "./data/lego/train"
 
     print(f"creating output dir: {out_dir}")
     os.makedirs(out_dir)
@@ -42,7 +42,7 @@ def train():
 
     train_image_size = 200
 
-    config = load_config_file(os.path.join(train_data_path, "transforms_test.json"))
+    config = load_config_file(os.path.join(train_data_path, "transforms_train.json"))
     transformation_matricies = []
     images = []
     fov = None
@@ -52,7 +52,7 @@ def train():
         if "fov" in f:
             fov = torch.tensor(f["fov"])
         transformation_matrix = torch.tensor(
-            f["transformation_matrix"], dtype=torch.float
+            f["transform_matrix"], dtype=torch.float
         ).t()
         transformation_matricies.append(transformation_matrix)
         image_src = f["file_path"]
