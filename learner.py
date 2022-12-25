@@ -46,8 +46,8 @@ def train():
     transformation_matricies = []
     images = []
     fov = None
-    if "camera_angle_x" in f:
-        fov = torch.tensor(f["camera_angle_x"])
+    if "camera_angle_x" in config:
+        fov = torch.tensor(config["camera_angle_x"])
     for f in config["frames"]:
         if "fov" in f:
             fov = torch.tensor(f["fov"])
