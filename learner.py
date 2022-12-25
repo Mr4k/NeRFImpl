@@ -31,7 +31,7 @@ def train():
 
     training_run_id = uuid.uuid4()
     out_dir = f"./training_output/runs/{training_run_id}/"
-    train_data_path = "./data/cube/train"
+    train_data_path = "./data/monkey/train"
 
     print(f"creating output dir: {out_dir}")
     os.makedirs(out_dir)
