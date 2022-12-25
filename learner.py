@@ -38,8 +38,6 @@ def train():
     scale = 5.0
     batch_size = 4096
 
-    train_image_size = 200
-
     config = load_config_file(os.path.join(train_data_path, "transforms_train.json"))
     transformation_matricies = []
     images = []
@@ -53,7 +51,7 @@ def train():
             f["transform_matrix"], dtype=torch.float
         ).t()
         transformation_matricies.append(transformation_matrix)
-        image_src = f["file_path"]
+        image_src = f["file_path"] + ".png"
         pixels = (
             torch.tensor(iio.imread(os.path.join(train_data_path, image_src)))[
                 :, :, :3
@@ -69,9 +67,6 @@ def train():
 
         assert width == height
         assert channels == 3
-
-        if width != train_image_size:
-            pixels = Resize(train_image_size).forward(pixels)
 
         images.append(pixels)
 

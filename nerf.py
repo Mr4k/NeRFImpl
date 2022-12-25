@@ -116,7 +116,7 @@ def load_config_file(path):
             raise Exception(
                 f"keyword 'frames' not found in config file at path: {path}"
             )
-        return config["frames"]
+        return config
     pass
 
 
