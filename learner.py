@@ -12,6 +12,8 @@ import imageio
 
 import os
 
+from torchvision.transforms import Resize
+
 from wandb_wrapper import wandb_init, wandb_log
 
 
@@ -38,6 +40,8 @@ def train():
     scale = 5.0
     batch_size = 4096
 
+    train_image_size = 200
+
     frames = load_config_file(os.path.join(train_data_path, "transforms_test.json"))
     transformation_matricies = []
     images = []
@@ -60,6 +64,13 @@ def train():
         )
 
         pixels /= torch.max(pixels)
+        width, height, channels = pixels.shape
+
+        assert width == height
+        assert channels == 3
+
+        if width != train_image_size:
+            pixels = Resize(train_image_size).forward(pixels)
 
         # sanity test learn a single color
         #pixels = torch.stack([torch.ones(200, 200) * 0.5, torch.ones(200, 200) * 0.5, torch.zeros(200, 200)], dim=-1)
