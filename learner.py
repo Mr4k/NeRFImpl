@@ -12,8 +12,6 @@ import imageio
 
 import os
 
-from torchvision.transforms import Resize
-
 from wandb_wrapper import wandb_init, wandb_log
 
 
