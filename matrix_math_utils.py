@@ -29,4 +29,4 @@ def generate_translation(pos):
     ).t()
 
 def generate_random_gimbal_transformation_matrix(scale):
-    return torch.matmul(torch.matmul(generate_translation(torch.tensor([0.0, 0, scale])), generate_rot_x(torch.pi * torch.rand(1))), generate_rot_z(torch.pi * torch.rand(1)))
+    return torch.matmul(torch.matmul(generate_translation(torch.tensor([0.0, 0, scale])), generate_rot_x(2 * torch.pi * torch.rand(1))), generate_rot_z(2 * torch.pi * torch.rand(1)))

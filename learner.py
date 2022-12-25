@@ -42,12 +42,15 @@ def train():
 
     train_image_size = 200
 
-    frames = load_config_file(os.path.join(train_data_path, "transforms_test.json"))
+    config = load_config_file(os.path.join(train_data_path, "transforms_test.json"))
     transformation_matricies = []
     images = []
     fov = None
-    for f in frames:
-        fov = torch.tensor(f["fov"])
+    if "camera_angle_x" in f:
+        fov = torch.tensor(f["camera_angle_x"])
+    for f in config["frames"]:
+        if "fov" in f:
+            fov = torch.tensor(f["fov"])
         transformation_matrix = torch.tensor(
             f["transformation_matrix"], dtype=torch.float
         ).t()
@@ -71,9 +74,6 @@ def train():
 
         if width != train_image_size:
             pixels = Resize(train_image_size).forward(pixels)
-
-        # sanity test learn a single color
-        #pixels = torch.stack([torch.ones(200, 200) * 0.5, torch.ones(200, 200) * 0.5, torch.zeros(200, 200)], dim=-1)
 
         images.append(pixels)
 
@@ -108,7 +108,6 @@ def train():
                     out_color_image,
                 )
                 print("saved snapshot")
-                #wandb_log({"random_gimbal_view_color": wandb.Image(out_color_image, mode="RGB"), "random_gimbal_view_depth": wandb.Image(out_depth_image)})
         
         optimizer.zero_grad()
 
