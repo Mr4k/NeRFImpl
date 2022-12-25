@@ -21,8 +21,8 @@ class NerfModel(torch.nn.Module):
         self.device = device
 
         self.scale = scale
-        self.l_pos = 2
-        self.l_dir = 2
+        self.l_pos = 10
+        self.l_dir = 4
 
         pos_input_dims = self.l_pos * 2 * 3
         dir_input_dims = self.l_dir * 2 * 3
