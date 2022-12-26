@@ -37,7 +37,7 @@ def train():
 
     # (batch size, 3)
     scale = 5.0
-    batch_size = 4096
+    batch_size = 2048
 
     config = load_config_file(os.path.join(train_data_path, "transforms_train.json"))
     transformation_matricies = []
@@ -141,8 +141,7 @@ def train():
                     out_coarse_color_image,
                 )
                 print("saved snapshot")
-
-        optimizer.zero_grad()
+                optimizer.zero_grad()
 
         camera_poses, rays, distance_to_depth_modifiers, expected_colors = sample_batch(
             batch_size,
