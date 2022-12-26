@@ -43,7 +43,7 @@ def render_image(size, transformation_matrix, fov, near, far, coarse_network, fi
         batch_fine_colors.append(fine_colors)
         batch_coarse_colors.append(coarse_colors)
 
-    return torch.concat(batch_fine_depths, dim=0), torch.concat(batch_fine_colors, dim=0), torch.concat(coarse_colors, dim=0)
+    return torch.concat(batch_fine_depths, dim=0), torch.concat(batch_fine_colors, dim=0), torch.concat(batch_coarse_colors, dim=0)
 
 
 def render_rays(

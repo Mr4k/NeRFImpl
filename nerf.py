@@ -6,7 +6,7 @@ from wandb_wrapper import wandb_init, wandb_log
 
 def inverse_transform_sampling(stopping_probs, bin_boundary_points, n):
     batch_size, _ = stopping_probs.shape
-    sample_bins = torch.multinomial(stopping_probs, n, True)
+    sample_bins = torch.multinomial(stopping_probs + 0.00001, n, True)
     indexes = torch.arange(0, batch_size, 1).repeat_interleave(n)
     flatten_samples = sample_bins.flatten()
     return (

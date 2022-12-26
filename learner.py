@@ -92,7 +92,7 @@ def train():
                 size = 200
 
                 with torch.no_grad():
-                    depth_image, color_image = render_image(
+                    depth_image, color_image, coarse_color_image = render_image(
                         size,
                         novel_view_transformation_matrix,
                         fov,
@@ -122,12 +122,23 @@ def train():
                     .flip([1])
                     .numpy()
                 )
+                out_coarse_color_image = (
+                    (coarse_color_image.cpu().detach() * 255)
+                    .reshape((size, size, 3))
+                    .transpose(0, 1)
+                    .flip([1])
+                    .numpy()
+                )
                 imageio.imwrite(
                     out_dir + f"view_{i}_depth_step_{step}.png", out_depth_image
                 )
                 imageio.imwrite(
                     out_dir + f"view_{i}_color_step_{step}.png",
                     out_color_image,
+                )
+                imageio.imwrite(
+                    out_dir + f"view_{i}_coarse_color_step_{step}.png",
+                    out_coarse_color_image,
                 )
                 print("saved snapshot")
 
@@ -143,7 +154,7 @@ def train():
 
         optimizer.zero_grad()
 
-        _, colors = render_rays(
+        _, colors, coarse_colors = render_rays(
             batch_size,
             camera_poses,
             rays,
@@ -155,7 +166,7 @@ def train():
             device,
         )
 
-        loss = loss_fn(colors.flatten(), expected_colors.flatten())
+        loss = loss_fn(colors.flatten(), expected_colors.flatten()) + loss_fn(coarse_colors.flatten(), expected_colors.flatten())
         loss.backward()
 
         optimizer.step()
