@@ -5,18 +5,18 @@ from wandb_wrapper import wandb_init, wandb_log
 
 
 def inverse_transform_sampling(stopping_probs, bin_boundary_points, n):
-    num_batches, _ = stopping_probs.shape
+    batch_size, _ = stopping_probs.shape
     sample_bins = torch.multinomial(stopping_probs, n, True)
-    indexes = torch.arange(0, num_batches, 1).repeat_interleave(n)
+    indexes = torch.arange(0, batch_size, 1).repeat_interleave(n)
     flatten_samples = sample_bins.flatten()
     return (
         (
             bin_boundary_points[indexes, flatten_samples + 1]
             - bin_boundary_points[indexes, flatten_samples]
         )
-        * torch.rand((num_batches * n))
+        * torch.rand((batch_size * n))
         + bin_boundary_points[indexes, flatten_samples]
-    ).view(num_batches, -1)
+    ).view(batch_size, -1)
 
 
 """
@@ -48,6 +48,30 @@ def get_network_output(network, points, dirs):
     return network(points, dirs)
 
 
+def trace_hierarchical_ray(device, coarse_network, fine_network, positions, directions, coarse_sample_points, fine_sample_points, t_near, t_far):
+    batch_size = positions.shape[0]
+    assert positions.shape[0] == directions.shape[0]
+    assert t_near.shape[0] == batch_size
+    assert len(t_near.shape) == 1
+    assert t_far.shape[0] == batch_size
+    assert len(t_far.shape) == 1
+
+    # TODO hmmm n + 1?
+    coarse_stratified_sample_times = compute_stratified_sample_points(
+        batch_size, coarse_sample_points + 1, t_near, t_far
+    )
+    coarse_color, _, stopping_probs = trace_ray(device, coarse_stratified_sample_times, coarse_network, positions, directions, coarse_sample_points, t_near, t_far)
+
+    inverse_transform_sample_times = inverse_transform_sampling(stopping_probs, coarse_stratified_sample_times, fine_sample_points)
+
+    fine_sample_times, _ = torch.sort(torch.concat([coarse_stratified_sample_times, inverse_transform_sample_times], dim=1)
+        , dim=1)
+
+    fine_color, fine_depth, _ = trace_ray(device, fine_sample_times, fine_network, positions, directions, coarse_sample_points + fine_sample_points, t_near, t_far)
+
+    return fine_color, fine_depth, coarse_color
+    
+
 """
 network: TBD
 positions: tensor dims = (batch_size, 3)
@@ -58,8 +82,7 @@ t_far: tensor dims = (batch_size)
 """
 
 
-def trace_ray(device, network, positions, directions, n, t_near, t_far):
-    # TODO hmmm n + 1?
+def trace_ray(device, stratified_sample_times, network, positions, directions, n, t_near, t_far):
     batch_size = positions.shape[0]
 
     assert positions.shape[0] == directions.shape[0]
@@ -67,10 +90,6 @@ def trace_ray(device, network, positions, directions, n, t_near, t_far):
     assert len(t_near.shape) == 1
     assert t_far.shape[0] == batch_size
     assert len(t_far.shape) == 1
-
-    stratified_sample_times = compute_stratified_sample_points(
-        batch_size, n + 1, t_near, t_far
-    )
 
     stratified_sample_points_centered_at_the_origin = stratified_sample_times.reshape(
         batch_size, n + 1, 1

@@ -4,9 +4,6 @@ import wandb
 from batch_and_sampler import render_image, render_rays, sample_batch
 from matrix_math_utils import (
     generate_random_gimbal_transformation_matrix,
-    generate_rot_x,
-    generate_rot_z,
-    generate_translation,
 )
 from nerf import load_config_file
 
@@ -18,6 +15,8 @@ import imageio
 import os
 
 from wandb_wrapper import wandb_init, wandb_log
+
+from itertools import chain
 
 
 def train():
@@ -74,9 +73,10 @@ def train():
     far = 7
 
     loss_fn = lambda outputs, labels: ((outputs - labels) ** 2).sum()
-    model = NerfModel(scale, device).to(device)
+    coarse_model = NerfModel(scale, device).to(device)
+    fine_model = NerfModel(scale, device).to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
+    optimizer = torch.optim.Adam(chain(coarse_model.parameters(), fine_model.parameters()), lr=0.0005)
 
     num_steps = 100000
     num_steps_to_render = 100
@@ -98,7 +98,8 @@ def train():
                         fov,
                         near,
                         far,
-                        model,
+                        coarse_model,
+                        fine_model,
                         device,
                     )
 
@@ -149,7 +150,8 @@ def train():
             distance_to_depth_modifiers,
             near,
             far,
-            model,
+            coarse_model,
+            fine_model,
             device,
         )
 

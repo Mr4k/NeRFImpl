@@ -5,6 +5,7 @@ from nerf import (
     compute_stratified_sample_points,
     generate_rays,
     inverse_transform_sampling,
+    trace_hierarchical_ray,
     trace_ray,
 )
 
@@ -121,6 +122,64 @@ class TestNerfUnit(unittest.TestCase):
         )
         self.assertLess(torch.abs(distance[0] - torch.tensor(t_near)), 1.0)
 
+    def test_trace_hierarchical_ray_distance(self):
+        batch_size = 10
+        for _ in range(100):
+            solid_distance = torch.rand(1) * 100
+
+            dirs = torch.rand((batch_size, 3))
+            dirs /= dirs.norm(dim=1).reshape(-1, 1).repeat(1, 3)
+
+            num_coarse_samples = 400
+            num_fine_samples = 50
+
+            camera_pos = torch.rand((batch_size, 3)) * 100
+
+            class FineDistanceNetwork:
+                def to(self, _):
+                    return self
+
+                def __call__(self, points, dirs):
+                    num_points, _ = points.shape
+                    distances = (
+                        points - camera_pos.repeat_interleave(num_coarse_samples + num_fine_samples + 1, 0)
+                    ).norm(dim=1)
+                    opacity = torch.zeros((num_points))
+                    opacity[distances >= solid_distance] = 10000
+                    colors = torch.zeros((num_points, 3))
+                    return colors, opacity
+
+            class CoarseDistanceNetwork:
+                def to(self, _):
+                    return self
+
+                def __call__(self, points, dirs):
+                    num_points, _ = points.shape
+                    distances = (
+                        points - camera_pos.repeat_interleave(num_coarse_samples + 1, 0)
+                    ).norm(dim=1)
+                    opacity = torch.zeros((num_points))
+                    # intentional start allocating some probability at solid_distance / 2 so that we can be sure the fine
+                    # network follows through
+                    opacity[distances >= solid_distance / 2] = 10
+                    colors = torch.zeros((num_points, 3))
+                    return colors, opacity
+
+            _, out_distances, _ = trace_hierarchical_ray(
+                "cpu",
+                CoarseDistanceNetwork(),
+                FineDistanceNetwork(),
+                camera_pos,
+                dirs,
+                num_coarse_samples,
+                num_fine_samples,
+                torch.tensor([0.1]).repeat(batch_size),
+                torch.tensor([101]).repeat(batch_size),
+            )
+            for d in out_distances:
+                self.assertLess(d, solid_distance + 0.5)
+                self.assertGreater(d, solid_distance - 0.5)
+
     def test_generate_rays_multibatch(self):
         epsilon = 0.0001
         side_length = torch.tensor(1.0) / torch.sqrt(torch.tensor(2.0))
@@ -219,14 +278,13 @@ class TestNerfUnit(unittest.TestCase):
         )
 
     def test_inverse_transform_sampling(self):
-        num_batches = 1
+        batch_size = 1
         stopping_probs = torch.tensor(
             [
                 [0.05, 0.5, 0.3, 0.15],
                 [0.3, 0.4, 0.1, 0.2],
             ]
         )
-        print(stopping_probs.shape)
         bin_boundaries = torch.tensor(
             [
                 [0.0, 1, 2, 3, 4],
@@ -235,7 +293,7 @@ class TestNerfUnit(unittest.TestCase):
         )
         points = inverse_transform_sampling(stopping_probs, bin_boundaries, 1000)
 
-        for i in range(num_batches):
+        for i in range(batch_size):
             bin_counts, _ = torch.histogram(points[i], bin_boundaries[i])
             self.assertLess(
                 (bin_counts / bin_counts.sum() - stopping_probs[i]).abs().sum(), 0.05
