@@ -28,5 +28,12 @@ def generate_translation(pos):
         [[1, 0, 0, pos[0]], [0, 1, 0, pos[1]], [0, 0, 1, pos[2]], [0, 0, 0, 1]]
     ).t()
 
+
 def generate_random_gimbal_transformation_matrix(scale):
-    return torch.matmul(torch.matmul(generate_translation(torch.tensor([0.0, 0, scale])), generate_rot_x(2 * torch.pi * torch.rand(1))), generate_rot_z(2 * torch.pi * torch.rand(1)))
+    return torch.matmul(
+        torch.matmul(
+            generate_translation(torch.tensor([0.0, 0, scale])),
+            generate_rot_x(2 * torch.pi * torch.rand(1)),
+        ),
+        generate_rot_z(2 * torch.pi * torch.rand(1)),
+    )

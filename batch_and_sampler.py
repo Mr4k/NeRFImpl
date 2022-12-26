@@ -24,7 +24,6 @@ def render_image(size, transformation_matrix, fov, near, far, network, device):
     screen_points = torch.cartesian_prod(xs, ys) + torch.tensor(
         [[0.5 / size, 0.5 / size]]
     ).repeat(total_rays, 1)
-    
 
     rays = generate_rays(fov, transformation_matrix[:3, :3], screen_points, 1)
     distance_to_depth_modifiers = torch.matmul(rays, center_ray.t())[:, 0]
@@ -35,9 +34,13 @@ def render_image(size, transformation_matrix, fov, near, far, network, device):
 
     batch_depths = []
     batch_colors = []
-    for ray_batch, ddm_batch, camera_pos_batch in zip(ray_batches, distance_to_depth_modifiers_batches, camera_pose_batches):
+    for ray_batch, ddm_batch, camera_pos_batch in zip(
+        ray_batches, distance_to_depth_modifiers_batches, camera_pose_batches
+    ):
         num_rays = ray_batch.shape[0]
-        depths, colors = render_rays(num_rays, camera_pos_batch, ray_batch, ddm_batch, near, far, network, device)
+        depths, colors = render_rays(
+            num_rays, camera_pos_batch, ray_batch, ddm_batch, near, far, network, device
+        )
         batch_depths.append(depths)
         batch_colors.append(colors)
 
@@ -45,11 +48,18 @@ def render_image(size, transformation_matrix, fov, near, far, network, device):
 
 
 def render_rays(
-    batch_size, camera_poses, rays, distance_to_depth_modifiers, near, far, network, device
+    batch_size,
+    camera_poses,
+    rays,
+    distance_to_depth_modifiers,
+    near,
+    far,
+    network,
+    device,
 ):
     nears = torch.tensor(near).repeat(batch_size) / distance_to_depth_modifiers
     fars = torch.tensor(far).repeat(batch_size) / distance_to_depth_modifiers
-    out_colors, dist = trace_ray(
+    out_colors, dist, _ = trace_ray(
         device,
         network,
         camera_poses,
@@ -62,23 +72,25 @@ def render_rays(
 
     return depth, out_colors
 
+
 def random_partition(num_catagories, num_draws):
-    cat = Categorical(torch.ones(num_catagories)/float(num_catagories))
-    return torch.histogram(cat.sample_n(num_draws).to(torch.float), bins=int(num_catagories))[0].to(torch.int)
+    cat = Categorical(torch.ones(num_catagories) / float(num_catagories))
+    return torch.histogram(
+        cat.sample_n(num_draws).to(torch.float), bins=int(num_catagories)
+    )[0].to(torch.int)
+
 
 def sample_batch(batch_size, size, transformation_matricies, images, fov):
     frame_perm = torch.randperm(len(transformation_matricies))
     shuffled_transformation_matricies = transformation_matricies[frame_perm]
     shuffled_images = images[frame_perm]
-    # TODO the sampling strategy is not specified and I am lazy so we're going to try something simple
-    # and dumb without thinking too much
     batch_rays = []
     batch_distance_to_depth_modifiers = []
     batch_camera_poses = []
     batch_expected_colors = []
     chunk_sizes = random_partition(len(transformation_matricies), batch_size)
-    for i, (transformation_matrix, img, chnk_size) in enumerate(
-        zip(shuffled_transformation_matricies, shuffled_images, chunk_sizes)
+    for (transformation_matrix, img, chnk_size) in zip(
+        shuffled_transformation_matricies, shuffled_images, chunk_sizes
     ):
         chnk_size = chnk_size.item()
         chunk_camera_poses = (

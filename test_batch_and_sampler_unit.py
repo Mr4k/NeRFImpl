@@ -43,5 +43,6 @@ class TestBatchAndSamplerUnit(unittest.TestCase):
             self.assertLessEqual(torch.max(partition), num_draws)
             self.assertGreaterEqual(torch.min(partition), 0)
 
+
 if __name__ == "__main__":
     unittest.main()

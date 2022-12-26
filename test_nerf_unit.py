@@ -1,7 +1,12 @@
 import unittest
 import torch
 
-from nerf import compute_stratified_sample_points, generate_rays, trace_ray
+from nerf import (
+    compute_stratified_sample_points,
+    generate_rays,
+    inverse_transform_sampling,
+    trace_ray,
+)
 
 
 class TestNerfUnit(unittest.TestCase):
@@ -34,9 +39,10 @@ class TestNerfUnit(unittest.TestCase):
 
             camera_pos = torch.rand((batch_size, 3)) * 100
 
-            class DistanceNetwork():
+            class DistanceNetwork:
                 def to(self, _):
                     return self
+
                 def __call__(self, points, dirs):
                     num_points, _ = points.shape
                     distances = (
@@ -47,7 +53,7 @@ class TestNerfUnit(unittest.TestCase):
                     colors = torch.zeros((num_points, 3))
                     return colors, opacity
 
-            _, out_distances = trace_ray(
+            _, out_distances, _ = trace_ray(
                 "cpu",
                 DistanceNetwork(),
                 camera_pos,
@@ -65,9 +71,10 @@ class TestNerfUnit(unittest.TestCase):
 
         camera_poses = torch.tensor([[2, 2, 3]])
 
-        class DistanceNetwork():
+        class DistanceNetwork:
             def to(self, _):
                 return self
+
             def __call__(self, points, dirs):
                 batch_size, _ = points.shape
 
@@ -75,7 +82,7 @@ class TestNerfUnit(unittest.TestCase):
                 colors = torch.zeros((batch_size, 3))
                 return colors, opacity
 
-        _, distance = trace_ray(
+        _, distance, _ = trace_ray(
             "cpu",
             DistanceNetwork(),
             camera_poses,
@@ -92,9 +99,10 @@ class TestNerfUnit(unittest.TestCase):
         camera_poses = torch.tensor([[2, 2, 3]])
         t_near = 30.0
 
-        class DistanceNetwork():
+        class DistanceNetwork:
             def to(self, _):
                 return self
+
             def __call__(self, points, dirs):
                 batch_size, _ = points.shape
 
@@ -102,7 +110,7 @@ class TestNerfUnit(unittest.TestCase):
                 colors = torch.zeros((batch_size, 3))
                 return colors, opacity
 
-        _, distance = trace_ray(
+        _, distance, _ = trace_ray(
             "cpu",
             DistanceNetwork(),
             camera_poses,
@@ -209,6 +217,29 @@ class TestNerfUnit(unittest.TestCase):
             epsilon,
             f"expected {expected} got {result} instead",
         )
+
+    def test_inverse_transform_sampling(self):
+        num_batches = 1
+        stopping_probs = torch.tensor(
+            [
+                [0.05, 0.5, 0.3, 0.15],
+                [0.3, 0.4, 0.1, 0.2],
+            ]
+        )
+        print(stopping_probs.shape)
+        bin_boundaries = torch.tensor(
+            [
+                [0.0, 1, 2, 3, 4],
+                [0.0, 10, 20, 70, 100],
+            ]
+        )
+        points = inverse_transform_sampling(stopping_probs, bin_boundaries, 1000)
+
+        for i in range(num_batches):
+            bin_counts, _ = torch.histogram(points[i], bin_boundaries[i])
+            self.assertLess(
+                (bin_counts / bin_counts.sum() - stopping_probs[i]).abs().sum(), 0.05
+            )
 
 
 if __name__ == "__main__":

@@ -3,6 +3,22 @@ import torch
 
 from wandb_wrapper import wandb_init, wandb_log
 
+
+def inverse_transform_sampling(stopping_probs, bin_boundary_points, n):
+    num_batches, _ = stopping_probs.shape
+    sample_bins = torch.multinomial(stopping_probs, n, True)
+    indexes = torch.arange(0, num_batches, 1).repeat_interleave(n)
+    flatten_samples = sample_bins.flatten()
+    return (
+        (
+            bin_boundary_points[indexes, flatten_samples + 1]
+            - bin_boundary_points[indexes, flatten_samples]
+        )
+        * torch.rand((num_batches * n))
+        + bin_boundary_points[indexes, flatten_samples]
+    ).view(num_batches, -1)
+
+
 """
 Returns an arr of n sampling points
 
@@ -74,6 +90,11 @@ def trace_ray(device, network, positions, directions, n, t_near, t_far):
     opacity = opacity.cpu().reshape(batch_size, n + 1)
 
     cum_partial_passthrough_sum = torch.zeros(batch_size)
+
+    # a tensor that gives the probablity of the ray terminating in the nth bin
+    # note this is really only need for the course network
+    # might want to refactor the code so it can be disabled for the fine network
+    stopping_probs = torch.zeros((batch_size, n))
     cum_color = torch.zeros((batch_size, 3))
     cum_expected_distance = torch.zeros(batch_size)
     distance_acc = torch.ones(batch_size) * t_near
@@ -85,17 +106,11 @@ def trace_ray(device, network, positions, directions, n, t_near, t_far):
         prob_hit_current_bin = 1 - torch.exp(-opacity[:, i] * delta)
         cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
 
-        cum_color += (cum_passthrough_prob * prob_hit_current_bin).reshape(
-            -1, 1
-        ).repeat(1, 3) * colors[:, i]
+        stopping_probs[:, i] = cum_passthrough_prob * prob_hit_current_bin
 
-        # we assume probability of collision is uniform in the bin
-        # TODO this might be an overestimate by delta / 2
-        curr_distance = distance_acc + delta / 2
+        cum_color += stopping_probs[:, i].reshape(-1, 1).repeat(1, 3) * colors[:, i]
 
-        cum_expected_distance += (
-            cum_passthrough_prob * prob_hit_current_bin * curr_distance
-        )
+        cum_expected_distance += stopping_probs[:, i] * distance_acc
 
         cum_partial_passthrough_sum += opacity[:, i] * delta
         distance_acc += delta
@@ -104,8 +119,12 @@ def trace_ray(device, network, positions, directions, n, t_near, t_far):
     cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
     cum_expected_distance += cum_passthrough_prob * t_far
 
-    return cum_color, torch.min(
-        torch.max(cum_expected_distance, torch.tensor(t_near)), torch.tensor(t_far)
+    return (
+        cum_color,
+        torch.min(
+            torch.max(cum_expected_distance, torch.tensor(t_near)), torch.tensor(t_far)
+        ),
+        stopping_probs,
     )
 
 

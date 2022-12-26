@@ -15,6 +15,7 @@ from neural_nerf import NerfModel
 class CubeNetwork:
     def to(self, _):
         return self
+
     def __call__(self, points, dirs):
         num_points, _ = points.shape
 
@@ -66,8 +67,12 @@ class CubeNetwork:
             other_axes = [0, 1, 2]
             other_axes.remove(height_axis)
             cond1 = points[:, height_axis] * height_axis_direction >= 0
-            cond2 = torch.abs(points[:, other_axes[0]]) <= torch.abs(points[:, height_axis])
-            cond3 = torch.abs(points[:, other_axes[1]]) <= torch.abs(points[:, height_axis])
+            cond2 = torch.abs(points[:, other_axes[0]]) <= torch.abs(
+                points[:, height_axis]
+            )
+            cond3 = torch.abs(points[:, other_axes[1]]) <= torch.abs(
+                points[:, height_axis]
+            )
             colors[cond1 & cond2 & cond3, :] = color
 
         return colors, opacity
@@ -200,7 +205,7 @@ class TestNerfInt(unittest.TestCase):
             near,
             far,
             CubeNetwork(),
-            "cpu"
+            "cpu",
         )
         self.assertEqual(depth.shape, torch.Size([4096]))
         self.assertEqual(colors.shape, torch.Size([4096, 3]))
@@ -251,7 +256,11 @@ class TestNerfInt(unittest.TestCase):
             images.append(pixels)
 
         camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
-            batch_size, 200, torch.stack(transformation_matricies), torch.stack(images), fov
+            batch_size,
+            200,
+            torch.stack(transformation_matricies),
+            torch.stack(images),
+            fov,
         )
         model = NerfModel(5.0, "cpu")
         depth, colors = render_rays(
@@ -262,7 +271,7 @@ class TestNerfInt(unittest.TestCase):
             near,
             far,
             model,
-            "cpu"
+            "cpu",
         )
         self.assertEqual(depth.shape, torch.Size([4096]))
         self.assertEqual(colors.shape, torch.Size([4096, 3]))
