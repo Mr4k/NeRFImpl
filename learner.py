@@ -67,6 +67,9 @@ def train(data_path, snapshot_iters):
 
         images.append(pixels)
 
+    transformation_matricies = torch.stack(transformation_matricies)
+    images = torch.stack(images)
+
     near = 0.5
     far = 7
 
@@ -143,8 +146,8 @@ def train(data_path, snapshot_iters):
         camera_poses, rays, distance_to_depth_modifiers, expected_colors = sample_batch(
             batch_size,
             200,
-            torch.stack(transformation_matricies),
-            torch.stack(images),
+            transformation_matricies,
+            images,
             fov,
         )
 

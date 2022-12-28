@@ -19,6 +19,7 @@ class NerfModel(torch.nn.Module):
     def __init__(self, scale, device):
         super(NerfModel, self).__init__()
         self.device = device
+        self.to(device)
 
         self.scale = scale
         self.l_pos = 10

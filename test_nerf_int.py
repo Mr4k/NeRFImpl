@@ -11,6 +11,7 @@ from nerf import load_config_file
 
 from neural_nerf import NerfModel
 
+from torch.profiler import profile, record_function, ProfilerActivity
 
 class CubeNetwork:
     def to(self, _):
@@ -80,7 +81,7 @@ class CubeNetwork:
 
 class TestNerfInt(unittest.TestCase):
     def test_rendering_depth_e2e_with_given_network(self):
-        frames = load_config_file("./idata/cameras.json")
+        frames = load_config_file("./integration_test_data/cameras.json")
         near = 0.5
         far = 7
         size = 200
@@ -97,13 +98,13 @@ class TestNerfInt(unittest.TestCase):
             color_image_src = fname + "." + ext
 
             pixels = (
-                torch.tensor(iio.imread(os.path.join("./idata/", image_src)))
+                torch.tensor(iio.imread(os.path.join("./integration_test_data/", image_src)))
                 .t()
                 .flipud()
                 .float()
             )
             color_pixels = (
-                torch.tensor(iio.imread(os.path.join("./idata/", color_image_src)))[
+                torch.tensor(iio.imread(os.path.join("./integration_test_data/", color_image_src)))[
                     :, :, :3
                 ]
                 .transpose(0, 1)
@@ -161,7 +162,7 @@ class TestNerfInt(unittest.TestCase):
             )
 
     def test_sample_batch_nerf_render_e2e(self):
-        frames = load_config_file("./idata/cameras.json")
+        frames = load_config_file("./integration_test_data/cameras.json")
 
         batch_size = 4096
 
@@ -178,7 +179,7 @@ class TestNerfInt(unittest.TestCase):
             transformation_matricies.append(transformation_matrix)
             image_src = f["file_path"]
             pixels = (
-                torch.tensor(iio.imread(os.path.join("./idata/", image_src)))[:, :, :3]
+                torch.tensor(iio.imread(os.path.join("./integration_test_data/", image_src)))[:, :, :3]
                 .transpose(0, 1)
                 .flip([0])
                 .float()
@@ -225,25 +226,19 @@ class TestNerfInt(unittest.TestCase):
         p95_g_error = torch.quantile(g_error, 0.97)
         self.assertLess(p95_g_error, 0.005)
 
-    def test_neural_nerf_render_e2e(self):
-        frames = load_config_file("./idata/cameras.json")
-
-        batch_size = 4096
-
-        near = 0.5
-        far = 7
-
+    def _load_examples_from_config(self):
+        config = load_config_file("./integration_test_data/transforms_views.json")
         transformation_matricies = []
         images = []
-        for f in frames:
-            fov = torch.tensor(f["fov"])
-            transformation_matrix = torch.tensor(
-                f["transformation_matrix"], dtype=torch.float
+        fov = torch.tensor(config["camera_angle_x"])
+        for f in config["frames"]:
+            transform_matrix = torch.tensor(
+                f["transform_matrix"], dtype=torch.float
             ).t()
-            transformation_matricies.append(transformation_matrix)
-            image_src = f["file_path"]
+            transformation_matricies.append(transform_matrix)
+            image_src = f["file_path"] + ".png"
             pixels = (
-                torch.tensor(iio.imread(os.path.join("./idata/", image_src)))[:, :, :3]
+                torch.tensor(iio.imread(os.path.join("./integration_test_data/", image_src)))[:, :, :3]
                 .transpose(0, 1)
                 .flip([0])
                 .float()
@@ -254,27 +249,77 @@ class TestNerfInt(unittest.TestCase):
             self.assertAlmostEqual(torch.max(pixels), 1.0, 3)
 
             images.append(pixels)
+            return fov, torch.stack(transformation_matricies), torch.stack(images)
+
+    def test_neural_nerf_render_e2e(self):
+        device = "cpu"
+        batch_size = 4096
+        near = 0.5
+        far = 7
+
+        fov, transform_matricies, images = self._load_examples_from_config()
+        coarse_network = NerfModel(5.0, device)
+        fine_network = NerfModel(5.0, device)
 
         camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
             batch_size,
             200,
-            torch.stack(transformation_matricies),
-            torch.stack(images),
+            transform_matricies,
+            images,
             fov,
         )
-        model = NerfModel(5.0, "cpu")
-        depth, colors = render_rays(
+        depth, colors, _ = render_rays(
             batch_size,
             camera_poses,
             rays,
             distance_to_depth_modifiers,
             near,
             far,
-            model,
-            "cpu",
+            coarse_network,
+            fine_network,
+            device
         )
         self.assertEqual(depth.shape, torch.Size([4096]))
         self.assertEqual(colors.shape, torch.Size([4096, 3]))
+
+    def test_profile_gpu_neural_nerf_render_e2e(self):
+        use_cuda = torch.cuda.is_available()
+        device = torch.device("cuda" if use_cuda else "cpu")
+
+        if not use_cuda:
+            print("no cuda acceleration available. Skipping test")
+            self.skipTest("no cuda acceleration available")
+
+        print("cuda acceleration available. Using cuda")
+        with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
+            with record_function("train_loop"):
+                batch_size = 3500
+                near = 0.5
+                far = 7
+
+                fov, transform_matricies, images = self._load_examples_from_config()
+                model = NerfModel(5.0, device)
+                
+                camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
+                    batch_size,
+                    200,
+                    transform_matricies,
+                    images,
+                    fov,
+                )
+                depth, colors, _ = render_rays(
+                    batch_size,
+                    camera_poses,
+                    rays,
+                    distance_to_depth_modifiers,
+                    near,
+                    far,
+                    model,
+                    device
+                )
+        self.assertEqual(depth.shape, torch.Size([4096]))
+        self.assertEqual(colors.shape, torch.Size([4096, 3]))
+        print(prof.key_averages(group_by_input_shape=True).table(sort_by="cpu_time_total", row_limit=10))
 
 
 if __name__ == "__main__":
