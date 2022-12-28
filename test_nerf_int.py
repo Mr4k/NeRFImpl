@@ -290,16 +290,17 @@ class TestNerfInt(unittest.TestCase):
             print("no cuda acceleration available. Skipping test")
             self.skipTest("no cuda acceleration available")
 
+        batch_size = 3000
+        near = 0.5
+        far = 7
+
+        fov, transform_matricies, images = self._load_examples_from_config()
+        coarse_network = NerfModel(5.0, device)
+        fine_network = NerfModel(5.0, device)
+
         print("cuda acceleration available. Using cuda")
         with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
-            with record_function("train_loop"):
-                batch_size = 10
-                near = 0.5
-                far = 7
-
-                fov, transform_matricies, images = self._load_examples_from_config()
-                model = NerfModel(5.0, device)
-                
+            with record_function("train_loop"):                
                 camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
                     batch_size,
                     200,
@@ -314,7 +315,8 @@ class TestNerfInt(unittest.TestCase):
                     distance_to_depth_modifiers,
                     near,
                     far,
-                    model,
+                    coarse_network,
+                    fine_network,
                     device
                 )
         self.assertEqual(depth.shape, torch.Size([4096]))
