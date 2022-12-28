@@ -299,7 +299,7 @@ class TestNerfInt(unittest.TestCase):
         fine_network = NerfModel(5.0, device)
 
         print("cuda acceleration available. Using cuda")
-        with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
+        with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True, with_stack=True) as prof:
             with record_function("train_loop"):                
                 camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
                     batch_size,
@@ -321,7 +321,7 @@ class TestNerfInt(unittest.TestCase):
                 )
         self.assertEqual(depth.shape, torch.Size([batch_size]))
         self.assertEqual(colors.shape, torch.Size([batch_size, 3]))
-        print(prof.key_averages(group_by_input_shape=True).table(sort_by="cpu_time_total", row_limit=10))
+        print(prof.key_averages(group_by_stack_n=7).table(sort_by="cpu_time_total", row_limit=10))
 
 
 if __name__ == "__main__":
