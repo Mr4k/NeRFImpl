@@ -18,8 +18,9 @@ from wandb_wrapper import wandb_init, wandb_log
 
 from itertools import chain
 
+import argparse
 
-def train():
+def train(train_data_path):
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
 
@@ -30,7 +31,6 @@ def train():
 
     training_run_id = uuid.uuid4()
     out_dir = f"./training_output/runs/{training_run_id}/"
-    train_data_path = "./data/lego/train"
 
     print(f"creating output dir: {out_dir}")
     os.makedirs(out_dir)
@@ -175,4 +175,7 @@ def train():
 
 
 if __name__ == "__main__":
-    train()
+    parser = argparse.ArgumentParser(description='Run NeRF')
+    parser.add_argument('--train_path', help='the train path')
+    args = parser.parse_args()
+    train(args["train_path"])
