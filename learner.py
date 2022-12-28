@@ -20,14 +20,14 @@ from itertools import chain
 
 import argparse
 
-def train(train_data_path):
+def train(data_path, snapshot_iters):
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
 
     if use_cuda:
         print("cuda acceleration available. Using cuda")
 
-    wandb_init({"entity": "mr4k", "project": "nerf"})
+    #wandb_init({"entity": "mr4k", "project": "nerf"})
 
     training_run_id = uuid.uuid4()
     out_dir = f"./training_output/runs/{training_run_id}/"
@@ -37,24 +37,22 @@ def train(train_data_path):
 
     # (batch size, 3)
     scale = 5.0
-    batch_size = 2048
+    batch_size = 3500
 
-    config = load_config_file(os.path.join(train_data_path, "transforms_train.json"))
+    config = load_config_file(os.path.join(data_path, "transforms_train.json"))
     transformation_matricies = []
     images = []
     fov = None
     if "camera_angle_x" in config:
         fov = torch.tensor(config["camera_angle_x"])
     for f in config["frames"]:
-        if "fov" in f:
-            fov = torch.tensor(f["fov"])
         transformation_matrix = torch.tensor(
             f["transform_matrix"], dtype=torch.float
         ).t()
         transformation_matricies.append(transformation_matrix)
         image_src = f["file_path"] + ".png"
         pixels = (
-            torch.tensor(iio.imread(os.path.join(train_data_path, image_src)))[:, :, :3]
+            torch.tensor(iio.imread(os.path.join(data_path, image_src)))[:, :, :3]
             .transpose(0, 1)
             .flip([0])
             .float()
@@ -79,12 +77,11 @@ def train(train_data_path):
     optimizer = torch.optim.Adam(chain(coarse_model.parameters(), fine_model.parameters()), lr=0.0005)
 
     num_steps = 100000
-    num_steps_to_render = 100
     novel_view_transformation_matricies = [
         generate_random_gimbal_transformation_matrix(scale) for _ in range(10)
     ]
     for step in range(num_steps):
-        if step % num_steps_to_render == 0:
+        if step % snapshot_iters == 0:
             for i, novel_view_transformation_matrix in enumerate(
                 novel_view_transformation_matricies
             ):
@@ -177,5 +174,6 @@ def train(train_data_path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run NeRF')
     parser.add_argument('--train_path', help='the train path')
+    parser.add_argument('--snapshot_iters', type=int, help='the number of iterations after which to take a snapshot')
     args = parser.parse_args()
-    train(args["train_path"])
+    train(args.train_path, args.snapshot_iters)
