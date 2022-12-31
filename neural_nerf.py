@@ -46,7 +46,7 @@ class NerfModel(torch.nn.Module):
         return torch.concat([sin_embeddings, cos_embeddings], dim=1)
 
     def forward(self, pos_input, dir_input):
-        pos_embedding = self.embed_tensor(pos_input / self.scale, self.l_pos, self.device)
+        pos_embedding = self.embed_tensor(pos_input / self.scale, self.l_pos)
 
         x = self.linear1(pos_embedding)
         x = self.relu_activation(x)
