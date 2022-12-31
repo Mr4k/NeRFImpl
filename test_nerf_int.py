@@ -304,23 +304,43 @@ class TestNerfInt(unittest.TestCase):
         far = 7
 
         fov, transform_matricies, images = self._load_examples_from_config()
-        coarse_network = NerfModel(5.0, device)
-        fine_network = NerfModel(5.0, device)
+        coarse_network = NerfModel(5.0, device).to(device)
+        fine_network = NerfModel(5.0, device).to(device)
+
+        camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
+            batch_size,
+            200,
+            transform_matricies,
+            images,
+            fov,
+        )
+
+        _, _, _ = render_rays(
+            batch_size,
+            camera_poses,
+            rays,
+            distance_to_depth_modifiers,
+            near,
+            far,
+            coarse_network,
+            fine_network,
+            device,
+        )
+
+        camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
+            batch_size,
+            200,
+            transform_matricies,
+            images,
+            fov,
+        )
 
         print("cuda acceleration available. Using cuda")
         with profile(
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
-            record_shapes=True,
             with_stack=True,
         ) as prof:
             with record_function("train_loop"):
-                camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
-                    batch_size,
-                    200,
-                    transform_matricies,
-                    images,
-                    fov,
-                )
                 depth, colors, _ = render_rays(
                     batch_size,
                     camera_poses,
@@ -334,11 +354,11 @@ class TestNerfInt(unittest.TestCase):
                 )
             self.assertEqual(depth.shape, torch.Size([batch_size]))
             self.assertEqual(colors.shape, torch.Size([batch_size, 3]))
-            print(
-                prof.key_averages(group_by_stack_n=10).table(
-                    sort_by="cpu_time_total", row_limit=10
-                )
+        print(
+            prof.key_averages(group_by_stack_n=5).table(
+                sort_by="cpu_time_total", row_limit=5
             )
+        )
 
 
 if __name__ == "__main__":
