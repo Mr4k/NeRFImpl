@@ -323,27 +323,29 @@ class TestNerfInt(unittest.TestCase):
             ),
             on_trace_ready=trace_handler
         ) as prof:
-            with record_function("train_loop"):
-                camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
-                    batch_size,
-                    200,
-                    transform_matricies,
-                    images,
-                    fov,
-                )
-                depth, colors, _ = render_rays(
-                    batch_size,
-                    camera_poses,
-                    rays,
-                    distance_to_depth_modifiers,
-                    near,
-                    far,
-                    coarse_network,
-                    fine_network,
-                    device,
-                )
-            self.assertEqual(depth.shape, torch.Size([batch_size]))
-            self.assertEqual(colors.shape, torch.Size([batch_size, 3]))
+            for _ in range(5):
+                with record_function("train_loop"):
+                    camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
+                        batch_size,
+                        200,
+                        transform_matricies,
+                        images,
+                        fov,
+                    )
+                    depth, colors, _ = render_rays(
+                        batch_size,
+                        camera_poses,
+                        rays,
+                        distance_to_depth_modifiers,
+                        near,
+                        far,
+                        coarse_network,
+                        fine_network,
+                        device,
+                    )
+                self.assertEqual(depth.shape, torch.Size([batch_size]))
+                self.assertEqual(colors.shape, torch.Size([batch_size, 3]))
+                prof.step()
 
 
 if __name__ == "__main__":
