@@ -307,20 +307,24 @@ class TestNerfInt(unittest.TestCase):
         coarse_network = NerfModel(5.0, device).to(device)
         fine_network = NerfModel(5.0, device).to(device)
 
-        camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
-            batch_size,
-            200,
-            transform_matricies,
-            images,
-            fov,
-        )
-
         print("cuda acceleration available. Using cuda")
         with profile(
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
             with_stack=True,
+            schedule=torch.profiler.schedule(
+                wait=0,
+                warmup=2,
+                active=10,
+            ),
         ) as prof:
             with record_function("train_loop"):
+                camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
+                    batch_size,
+                    200,
+                    transform_matricies,
+                    images,
+                    fov,
+                )
                 depth, colors, _ = render_rays(
                     batch_size,
                     camera_poses,
