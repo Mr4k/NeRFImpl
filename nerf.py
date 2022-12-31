@@ -4,17 +4,17 @@ import torch
 from wandb_wrapper import wandb_init, wandb_log
 
 
-def inverse_transform_sampling(stopping_probs, bin_boundary_points, n):
+def inverse_transform_sampling(device, stopping_probs, bin_boundary_points, n):
     batch_size, _ = stopping_probs.shape
     sample_bins = torch.multinomial(stopping_probs + 0.00001, n, True)
-    indexes = torch.arange(0, batch_size, 1).repeat_interleave(n)
+    indexes = torch.arange(0, batch_size, 1, device=device).repeat_interleave(n)
     flatten_samples = sample_bins.flatten()
     return (
         (
             bin_boundary_points[indexes, flatten_samples + 1]
             - bin_boundary_points[indexes, flatten_samples]
         )
-        * torch.rand((batch_size * n))
+        * torch.rand((batch_size * n), device=device)
         + bin_boundary_points[indexes, flatten_samples]
     ).view(batch_size, -1)
 
@@ -29,12 +29,12 @@ t_far: tensor dims = (batch_size)
 """
 
 
-def compute_stratified_sample_points(batch_size, n, t_near, t_far):
+def compute_stratified_sample_points(device, batch_size, n, t_near, t_far):
     bin_width = t_far - t_near
     return (
-        torch.tensor(t_near).reshape(-1, 1).repeat(1, n)
+        torch.tensor(t_near, device=device).reshape(-1, 1).repeat(1, n)
         + bin_width.reshape(-1, 1)
-        * (torch.rand((batch_size, n)) + torch.arange(n).repeat(batch_size, 1))
+        * (torch.rand((batch_size, n), device=device) + torch.arange(n, device=device).repeat(batch_size, 1))
         / n
     )
 
@@ -59,6 +59,13 @@ def trace_hierarchical_ray(
     t_near,
     t_far,
 ):
+    coarse_network = coarse_network.to(device)
+    fine_network = fine_network.to(device)
+    positions = positions.to(device)
+    directions = directions.to(device)
+    t_near = t_near.to(device)
+    t_far = t_far.to(device)
+
     batch_size = positions.shape[0]
     assert positions.shape[0] == directions.shape[0]
     assert t_near.shape[0] == batch_size
@@ -68,7 +75,7 @@ def trace_hierarchical_ray(
 
     # TODO hmmm n + 1?
     coarse_stratified_sample_times = compute_stratified_sample_points(
-        batch_size, coarse_sample_points + 1, t_near, t_far
+        device, batch_size, coarse_sample_points + 1, t_near, t_far
     )
     coarse_color, _, stopping_probs = trace_ray(
         device,
@@ -82,7 +89,7 @@ def trace_hierarchical_ray(
     )
 
     inverse_transform_sample_times = inverse_transform_sampling(
-        stopping_probs, coarse_stratified_sample_times, fine_sample_points
+        device, stopping_probs, coarse_stratified_sample_times, fine_sample_points
     )
 
     fine_sample_times, _ = torch.sort(
@@ -135,11 +142,10 @@ def trace_ray(
         + positions.reshape(batch_size, 1, -1).repeat(1, n + 1, 1)
     )
 
-    # tiny cuda region at first
     colors, opacity = get_network_output(
-        network.to(device),
-        stratified_sample_points.view(-1, 3).to(device),
-        directions.repeat_interleave(n + 1, dim=0).to(device),
+        network,
+        stratified_sample_points.view(-1, 3),
+        directions.repeat_interleave(n + 1, dim=0),
     )
     colors = colors.cpu().reshape(batch_size, n + 1, 3)
     opacity = opacity.cpu().reshape(batch_size, n + 1)
@@ -149,10 +155,10 @@ def trace_ray(
     # a tensor that gives the probablity of the ray terminating in the nth bin
     # note this is really only need for the course network
     # might want to refactor the code so it can be disabled for the fine network
-    stopping_probs = torch.zeros((batch_size, n))
-    cum_color = torch.zeros((batch_size, 3))
-    cum_expected_distance = torch.zeros(batch_size)
-    distance_acc = torch.ones(batch_size) * t_near
+    stopping_probs = torch.zeros((batch_size, n), device=device)
+    cum_color = torch.zeros((batch_size, 3), device=device)
+    cum_expected_distance = torch.zeros(batch_size, device=device)
+    distance_acc = torch.ones(batch_size, device=device) * t_near
 
     # TODO (getting rid of this for loop likely speeds up rendering)
     # on second thought maybe not, bottleneck will eventually likely be get_network_output
