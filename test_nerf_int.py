@@ -343,6 +343,8 @@ class TestNerfInt(unittest.TestCase):
                         fine_network,
                         device,
                     )
+                depth.detach()
+                colors.detach()
                 self.assertEqual(depth.shape, torch.Size([batch_size]))
                 self.assertEqual(colors.shape, torch.Size([batch_size, 3]))
                 prof.step()
