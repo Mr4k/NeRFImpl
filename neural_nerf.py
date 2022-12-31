@@ -18,8 +18,8 @@ class NerfModel(torch.nn.Module):
         dir_input_dims = self.l_dir * 2 * 3
 
         self.scalers = {
-            pos_input_dims: torch.pow(2, torch.arange(0, pos_input_dims, 1, device=device)).repeat_interleave(3),
-            dir_input_dims: torch.pow(2, torch.arange(0, dir_input_dims, 1, device=device)).repeat_interleave(3)
+            self.l_pos: torch.pow(2, torch.arange(0, pos_input_dims, 1, device=device)).repeat_interleave(3),
+            self.l_dir: torch.pow(2, torch.arange(0, dir_input_dims, 1, device=device)).repeat_interleave(3)
         }
 
         self.linear1 = torch.nn.Linear(pos_input_dims, 256)
