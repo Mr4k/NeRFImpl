@@ -109,7 +109,7 @@ def trace_hierarchical_ray(
         t_far,
     )
 
-    return fine_color, fine_depth, coarse_color
+    return fine_color.cpu(), fine_depth.cpu(), coarse_color.cpu()
 
 
 """
@@ -166,8 +166,6 @@ def trace_ray(
         prob_hit_current_bin = 1 - torch.exp(-opacity[:, i] * delta)
         cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
 
-        print("cum_passthrough_prob:", cum_passthrough_prob.device)
-        print("prob_hit_current_bin:", prob_hit_current_bin.device)
         stopping_probs[:, i] = cum_passthrough_prob * prob_hit_current_bin
 
         cum_color += stopping_probs[:, i].reshape(-1, 1).repeat(1, 3) * colors[:, i]
