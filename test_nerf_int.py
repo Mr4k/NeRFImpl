@@ -327,6 +327,14 @@ class TestNerfInt(unittest.TestCase):
             device,
         )
 
+        camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
+            batch_size,
+            200,
+            transform_matricies,
+            images,
+            fov,
+        )
+
         print("cuda acceleration available. Using cuda")
         with profile(
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
