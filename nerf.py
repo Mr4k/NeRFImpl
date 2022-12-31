@@ -146,8 +146,8 @@ def trace_ray(
         stratified_sample_points.view(-1, 3),
         directions.repeat_interleave(n + 1, dim=0),
     )
-    colors = colors.cpu().reshape(batch_size, n + 1, 3)
-    opacity = opacity.cpu().reshape(batch_size, n + 1)
+    colors = colors.reshape(batch_size, n + 1, 3)
+    opacity = opacity.reshape(batch_size, n + 1)
 
     cum_partial_passthrough_sum = torch.zeros(batch_size)
 
