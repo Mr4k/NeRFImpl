@@ -7,7 +7,10 @@ import random
 
 from nerf import get_camera_position, generate_rays, trace_hierarchical_ray
 
-def render_image(size, transformation_matrix, fov, near, far, coarse_network, fine_network, device):
+
+def render_image(
+    size, transformation_matrix, fov, near, far, coarse_network, fine_network, device
+):
     total_rays = size * size
     batch_size = 4096
     camera_poses = (
@@ -23,7 +26,6 @@ def render_image(size, transformation_matrix, fov, near, far, coarse_network, fi
     screen_points = torch.cartesian_prod(xs, ys) + torch.tensor(
         [[0.5 / size, 0.5 / size]]
     ).repeat(total_rays, 1)
-    
 
     rays = generate_rays(fov, transformation_matrix[:3, :3], screen_points, 1)
     distance_to_depth_modifiers = torch.matmul(rays, center_ray.t())[:, 0]
@@ -36,18 +38,42 @@ def render_image(size, transformation_matrix, fov, near, far, coarse_network, fi
     batch_fine_colors = []
     batch_coarse_colors = []
 
-    for ray_batch, ddm_batch, camera_pos_batch in zip(ray_batches, distance_to_depth_modifiers_batches, camera_pose_batches):
+    for ray_batch, ddm_batch, camera_pos_batch in zip(
+        ray_batches, distance_to_depth_modifiers_batches, camera_pose_batches
+    ):
         num_rays = ray_batch.shape[0]
-        fine_depths, fine_colors, coarse_colors = render_rays(num_rays, camera_pos_batch, ray_batch, ddm_batch, near, far, coarse_network, fine_network, device)
+        fine_depths, fine_colors, coarse_colors = render_rays(
+            num_rays,
+            camera_pos_batch,
+            ray_batch,
+            ddm_batch,
+            near,
+            far,
+            coarse_network,
+            fine_network,
+            device,
+        )
         batch_fine_depths.append(fine_depths)
         batch_fine_colors.append(fine_colors)
         batch_coarse_colors.append(coarse_colors)
 
-    return torch.concat(batch_fine_depths, dim=0), torch.concat(batch_fine_colors, dim=0), torch.concat(batch_coarse_colors, dim=0)
+    return (
+        torch.concat(batch_fine_depths, dim=0),
+        torch.concat(batch_fine_colors, dim=0),
+        torch.concat(batch_coarse_colors, dim=0),
+    )
 
 
 def render_rays(
-    batch_size, camera_poses, rays, distance_to_depth_modifiers, near, far, coarse_network, fine_network, device
+    batch_size,
+    camera_poses,
+    rays,
+    distance_to_depth_modifiers,
+    near,
+    far,
+    coarse_network,
+    fine_network,
+    device,
 ):
     nears = torch.tensor(near).repeat(batch_size) / distance_to_depth_modifiers
     fars = torch.tensor(far).repeat(batch_size) / distance_to_depth_modifiers
@@ -66,9 +92,13 @@ def render_rays(
 
     return depth, fine_colors, coarse_colors
 
+
 def random_partition(num_catagories, num_draws):
-    cat = Categorical(torch.ones(num_catagories)/float(num_catagories))
-    return torch.histogram(cat.sample_n(num_draws).to(torch.float), bins=int(num_catagories))[0].to(torch.int)
+    cat = Categorical(torch.ones(num_catagories) / float(num_catagories))
+    return torch.histogram(
+        cat.sample_n(num_draws).to(torch.float), bins=int(num_catagories)
+    )[0].to(torch.int)
+
 
 def sample_batch(batch_size, size, transformation_matricies, images, fov):
     frame_perm = torch.randperm(len(transformation_matricies))
@@ -79,7 +109,9 @@ def sample_batch(batch_size, size, transformation_matricies, images, fov):
     batch_camera_poses = []
     batch_expected_colors = []
     chunk_sizes = random_partition(len(transformation_matricies), batch_size)
-    for (transformation_matrix, img, chnk_size) in zip(shuffled_transformation_matricies, shuffled_images, chunk_sizes):
+    for (transformation_matrix, img, chnk_size) in zip(
+        shuffled_transformation_matricies, shuffled_images, chunk_sizes
+    ):
         chnk_size = chnk_size.item()
         chunk_camera_poses = (
             get_camera_position(transformation_matrix)

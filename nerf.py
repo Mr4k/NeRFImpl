@@ -48,7 +48,17 @@ def get_network_output(network, points, dirs):
     return network(points, dirs)
 
 
-def trace_hierarchical_ray(device, coarse_network, fine_network, positions, directions, coarse_sample_points, fine_sample_points, t_near, t_far):
+def trace_hierarchical_ray(
+    device,
+    coarse_network,
+    fine_network,
+    positions,
+    directions,
+    coarse_sample_points,
+    fine_sample_points,
+    t_near,
+    t_far,
+):
     batch_size = positions.shape[0]
     assert positions.shape[0] == directions.shape[0]
     assert t_near.shape[0] == batch_size
@@ -60,17 +70,41 @@ def trace_hierarchical_ray(device, coarse_network, fine_network, positions, dire
     coarse_stratified_sample_times = compute_stratified_sample_points(
         batch_size, coarse_sample_points + 1, t_near, t_far
     )
-    coarse_color, _, stopping_probs = trace_ray(device, coarse_stratified_sample_times, coarse_network, positions, directions, coarse_sample_points, t_near, t_far)
+    coarse_color, _, stopping_probs = trace_ray(
+        device,
+        coarse_stratified_sample_times,
+        coarse_network,
+        positions,
+        directions,
+        coarse_sample_points,
+        t_near,
+        t_far,
+    )
 
-    inverse_transform_sample_times = inverse_transform_sampling(stopping_probs, coarse_stratified_sample_times, fine_sample_points)
+    inverse_transform_sample_times = inverse_transform_sampling(
+        stopping_probs, coarse_stratified_sample_times, fine_sample_points
+    )
 
-    fine_sample_times, _ = torch.sort(torch.concat([coarse_stratified_sample_times, inverse_transform_sample_times], dim=1)
-        , dim=1)
+    fine_sample_times, _ = torch.sort(
+        torch.concat(
+            [coarse_stratified_sample_times, inverse_transform_sample_times], dim=1
+        ),
+        dim=1,
+    )
 
-    fine_color, fine_depth, _ = trace_ray(device, fine_sample_times, fine_network, positions, directions, coarse_sample_points + fine_sample_points, t_near, t_far)
+    fine_color, fine_depth, _ = trace_ray(
+        device,
+        fine_sample_times,
+        fine_network,
+        positions,
+        directions,
+        coarse_sample_points + fine_sample_points,
+        t_near,
+        t_far,
+    )
 
     return fine_color, fine_depth, coarse_color
-    
+
 
 """
 network: TBD
@@ -82,7 +116,9 @@ t_far: tensor dims = (batch_size)
 """
 
 
-def trace_ray(device, stratified_sample_times, network, positions, directions, n, t_near, t_far):
+def trace_ray(
+    device, stratified_sample_times, network, positions, directions, n, t_near, t_far
+):
     batch_size = positions.shape[0]
 
     assert positions.shape[0] == directions.shape[0]

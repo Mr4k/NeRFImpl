@@ -13,6 +13,7 @@ from neural_nerf import NerfModel
 
 from torch.profiler import profile, record_function, ProfilerActivity
 
+
 class CubeNetwork:
     def to(self, _):
         return self
@@ -98,15 +99,19 @@ class TestNerfInt(unittest.TestCase):
             color_image_src = fname + "." + ext
 
             pixels = (
-                torch.tensor(iio.imread(os.path.join("./integration_test_data/", image_src)))
+                torch.tensor(
+                    iio.imread(os.path.join("./integration_test_data/", image_src))
+                )
                 .t()
                 .flipud()
                 .float()
             )
             color_pixels = (
-                torch.tensor(iio.imread(os.path.join("./integration_test_data/", color_image_src)))[
-                    :, :, :3
-                ]
+                torch.tensor(
+                    iio.imread(
+                        os.path.join("./integration_test_data/", color_image_src)
+                    )
+                )[:, :, :3]
                 .transpose(0, 1)
                 .flip([0])
                 .float()
@@ -179,7 +184,9 @@ class TestNerfInt(unittest.TestCase):
             transformation_matricies.append(transformation_matrix)
             image_src = f["file_path"]
             pixels = (
-                torch.tensor(iio.imread(os.path.join("./integration_test_data/", image_src)))[:, :, :3]
+                torch.tensor(
+                    iio.imread(os.path.join("./integration_test_data/", image_src))
+                )[:, :, :3]
                 .transpose(0, 1)
                 .flip([0])
                 .float()
@@ -238,7 +245,9 @@ class TestNerfInt(unittest.TestCase):
             transformation_matricies.append(transform_matrix)
             image_src = f["file_path"] + ".png"
             pixels = (
-                torch.tensor(iio.imread(os.path.join("./integration_test_data/", image_src)))[:, :, :3]
+                torch.tensor(
+                    iio.imread(os.path.join("./integration_test_data/", image_src))
+                )[:, :, :3]
                 .transpose(0, 1)
                 .flip([0])
                 .float()
@@ -277,7 +286,7 @@ class TestNerfInt(unittest.TestCase):
             far,
             coarse_network,
             fine_network,
-            device
+            device,
         )
         self.assertEqual(depth.shape, torch.Size([4096]))
         self.assertEqual(colors.shape, torch.Size([4096, 3]))
@@ -299,8 +308,12 @@ class TestNerfInt(unittest.TestCase):
         fine_network = NerfModel(5.0, device)
 
         print("cuda acceleration available. Using cuda")
-        with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True, with_stack=True) as prof:
-            with record_function("train_loop"):                
+        with profile(
+            activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+            record_shapes=True,
+            with_stack=True,
+        ) as prof:
+            with record_function("train_loop"):
                 camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
                     batch_size,
                     200,
@@ -317,11 +330,15 @@ class TestNerfInt(unittest.TestCase):
                     far,
                     coarse_network,
                     fine_network,
-                    device
+                    device,
                 )
-        self.assertEqual(depth.shape, torch.Size([batch_size]))
-        self.assertEqual(colors.shape, torch.Size([batch_size, 3]))
-        print(prof.key_averages(group_by_stack_n=10).table(sort_by="cpu_time_total", row_limit=10))
+            self.assertEqual(depth.shape, torch.Size([batch_size]))
+            self.assertEqual(colors.shape, torch.Size([batch_size, 3]))
+            print(
+                prof.key_averages(group_by_stack_n=10).table(
+                    sort_by="cpu_time_total", row_limit=10
+                )
+            )
 
 
 if __name__ == "__main__":

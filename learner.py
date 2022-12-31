@@ -20,6 +20,7 @@ from itertools import chain
 
 import argparse
 
+
 def train(data_path, snapshot_iters):
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
@@ -27,7 +28,7 @@ def train(data_path, snapshot_iters):
     if use_cuda:
         print("cuda acceleration available. Using cuda")
 
-    #wandb_init({"entity": "mr4k", "project": "nerf"})
+    # wandb_init({"entity": "mr4k", "project": "nerf"})
 
     training_run_id = uuid.uuid4()
     out_dir = f"./training_output/runs/{training_run_id}/"
@@ -77,7 +78,9 @@ def train(data_path, snapshot_iters):
     coarse_model = NerfModel(scale, device).to(device)
     fine_model = NerfModel(scale, device).to(device)
 
-    optimizer = torch.optim.Adam(chain(coarse_model.parameters(), fine_model.parameters()), lr=0.0005)
+    optimizer = torch.optim.Adam(
+        chain(coarse_model.parameters(), fine_model.parameters()), lr=0.0005
+    )
 
     num_steps = 100000
     novel_view_transformation_matricies = [
@@ -165,7 +168,9 @@ def train(data_path, snapshot_iters):
             device,
         )
 
-        loss = loss_fn(colors.flatten(), expected_colors.flatten()) + loss_fn(coarse_colors.flatten(), expected_colors.flatten())
+        loss = loss_fn(colors.flatten(), expected_colors.flatten()) + loss_fn(
+            coarse_colors.flatten(), expected_colors.flatten()
+        )
         loss.backward()
 
         optimizer.step()
@@ -175,8 +180,12 @@ def train(data_path, snapshot_iters):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Run NeRF')
-    parser.add_argument('--train_path', help='the train path')
-    parser.add_argument('--snapshot_iters', type=int, help='the number of iterations after which to take a snapshot')
+    parser = argparse.ArgumentParser(description="Run NeRF")
+    parser.add_argument("--train_path", help="the train path")
+    parser.add_argument(
+        "--snapshot_iters",
+        type=int,
+        help="the number of iterations after which to take a snapshot",
+    )
     args = parser.parse_args()
     train(args.train_path, args.snapshot_iters)

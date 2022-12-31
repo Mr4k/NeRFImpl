@@ -142,7 +142,10 @@ class TestNerfUnit(unittest.TestCase):
                 def __call__(self, points, dirs):
                     num_points, _ = points.shape
                     distances = (
-                        points - camera_pos.repeat_interleave(num_coarse_samples + num_fine_samples + 1, 0)
+                        points
+                        - camera_pos.repeat_interleave(
+                            num_coarse_samples + num_fine_samples + 1, 0
+                        )
                     ).norm(dim=1)
                     opacity = torch.zeros((num_points))
                     opacity[distances >= solid_distance] = 10000
