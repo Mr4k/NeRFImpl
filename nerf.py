@@ -32,7 +32,7 @@ t_far: tensor dims = (batch_size)
 def compute_stratified_sample_points(device, batch_size, n, t_near, t_far):
     bin_width = t_far - t_near
     return (
-        torch.tensor(t_near, device=device).reshape(-1, 1).repeat(1, n)
+        torch.tensor(t_near).to(device).reshape(-1, 1).repeat(1, n)
         + bin_width.reshape(-1, 1)
         * (torch.rand((batch_size, n), device=device) + torch.arange(n, device=device).repeat(batch_size, 1))
         / n
@@ -73,7 +73,6 @@ def trace_hierarchical_ray(
     assert t_far.shape[0] == batch_size
     assert len(t_far.shape) == 1
 
-    # TODO hmmm n + 1?
     coarse_stratified_sample_times = compute_stratified_sample_points(
         device, batch_size, coarse_sample_points + 1, t_near, t_far
     )
@@ -164,6 +163,8 @@ def trace_ray(
     # on second thought maybe not, bottleneck will eventually likely be get_network_output
     for i in range(n):
         delta = stratified_sample_times[:, i + 1] - stratified_sample_times[:, i]
+        print("sample times device:", delta.device)
+        print("opacity device:", opacity.device)
         prob_hit_current_bin = 1 - torch.exp(-opacity[:, i] * delta)
         cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
 
