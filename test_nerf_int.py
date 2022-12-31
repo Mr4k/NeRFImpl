@@ -299,7 +299,7 @@ class TestNerfInt(unittest.TestCase):
             print("no cuda acceleration available. Skipping test")
             self.skipTest("no cuda acceleration available")
 
-        batch_size = 3000
+        batch_size = 4096
         near = 0.5
         far = 7
 
@@ -321,6 +321,7 @@ class TestNerfInt(unittest.TestCase):
                         images,
                         fov,
                     )
+    
         _, _, _ = render_rays(
             batch_size,
             camera_poses,
