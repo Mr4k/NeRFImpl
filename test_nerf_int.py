@@ -307,6 +307,11 @@ class TestNerfInt(unittest.TestCase):
         coarse_network = NerfModel(5.0, device).to(device)
         fine_network = NerfModel(5.0, device).to(device)
 
+        def trace_handler(prof):
+            print(prof.key_averages(group_by_stack_n=5).table(
+                sort_by="cpu_time_total", row_limit=5
+            ))
+
         print("cuda acceleration available. Using cuda")
         with profile(
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
@@ -316,6 +321,7 @@ class TestNerfInt(unittest.TestCase):
                 warmup=2,
                 active=2,
             ),
+            on_trace_ready=trace_handler
         ) as prof:
             with record_function("train_loop"):
                 camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
@@ -338,11 +344,6 @@ class TestNerfInt(unittest.TestCase):
                 )
             self.assertEqual(depth.shape, torch.Size([batch_size]))
             self.assertEqual(colors.shape, torch.Size([batch_size, 3]))
-        print(
-            prof.key_averages(group_by_stack_n=5).table(
-                sort_by="cpu_time_total", row_limit=5
-            )
-        )
 
 
 if __name__ == "__main__":
