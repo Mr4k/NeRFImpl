@@ -313,17 +313,31 @@ class TestNerfInt(unittest.TestCase):
             ))
 
         print("cuda acceleration available. Using cuda")
+
+        camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
+                        batch_size,
+                        200,
+                        transform_matricies,
+                        images,
+                        fov,
+                    )
+        _, _, _ = render_rays(
+            batch_size,
+            camera_poses,
+            rays,
+            distance_to_depth_modifiers,
+            near,
+            far,
+            coarse_network,
+            fine_network,
+            device,
+        )
+
         with profile(
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
             with_stack=True,
-            schedule=torch.profiler.schedule(
-                wait=1,
-                warmup=2,
-                active=2,
-            ),
             on_trace_ready=trace_handler
         ) as prof:
-            for _ in range(5):
                 with record_function("train_loop"):
                     camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
                         batch_size,
@@ -343,8 +357,6 @@ class TestNerfInt(unittest.TestCase):
                         fine_network,
                         device,
                     )
-                depth.detach()
-                colors.detach()
                 self.assertEqual(depth.shape, torch.Size([batch_size]))
                 self.assertEqual(colors.shape, torch.Size([batch_size, 3]))
                 prof.step()
