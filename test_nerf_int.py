@@ -335,7 +335,7 @@ class TestNerfInt(unittest.TestCase):
             self.assertEqual(depth.shape, torch.Size([batch_size]))
             self.assertEqual(colors.shape, torch.Size([batch_size, 3]))
         print(
-            prof.key_averages(group_by_stack_n=10).table(
+            prof.key_averages(group_by_input_shape=True).table(
                 sort_by="cpu_time_total", row_limit=10
             )
         )
