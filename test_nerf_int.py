@@ -312,9 +312,9 @@ class TestNerfInt(unittest.TestCase):
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
             with_stack=True,
             schedule=torch.profiler.schedule(
-                wait=0,
+                wait=1,
                 warmup=2,
-                active=10,
+                active=2,
             ),
         ) as prof:
             with record_function("train_loop"):
@@ -336,7 +336,6 @@ class TestNerfInt(unittest.TestCase):
                     fine_network,
                     device,
                 )
-            print("goooo")
             self.assertEqual(depth.shape, torch.Size([batch_size]))
             self.assertEqual(colors.shape, torch.Size([batch_size, 3]))
         print(
