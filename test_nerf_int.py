@@ -338,9 +338,7 @@ class TestNerfInt(unittest.TestCase):
         print("cuda acceleration available. Using cuda")
         with profile(
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
-            record_shapes=True,
             with_stack=True,
-            profile_memory=True
         ) as prof:
             with record_function("train_loop"):
                 depth, colors, _ = render_rays(
