@@ -149,7 +149,7 @@ def trace_ray(
     colors = colors.reshape(batch_size, n + 1, 3)
     opacity = opacity.reshape(batch_size, n + 1)
 
-    cum_partial_passthrough_sum = torch.zeros(batch_size)
+    cum_partial_passthrough_sum = torch.zeros(batch_size, device=device)
 
     # a tensor that gives the probablity of the ray terminating in the nth bin
     # note this is really only need for the course network
