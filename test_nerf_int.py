@@ -304,8 +304,8 @@ class TestNerfInt(unittest.TestCase):
         far = 7
 
         fov, transform_matricies, images = self._load_examples_from_config()
-        coarse_network = NerfModel(5.0, device)
-        fine_network = NerfModel(5.0, device)
+        coarse_network = NerfModel(5.0, device).to(device)
+        fine_network = NerfModel(5.0, device).to(device)
 
         camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
             batch_size,
@@ -313,6 +313,18 @@ class TestNerfInt(unittest.TestCase):
             transform_matricies,
             images,
             fov,
+        )
+
+        _, _, _ = render_rays(
+            batch_size,
+            camera_poses,
+            rays,
+            distance_to_depth_modifiers,
+            near,
+            far,
+            coarse_network,
+            fine_network,
+            device,
         )
 
         print("cuda acceleration available. Using cuda")
