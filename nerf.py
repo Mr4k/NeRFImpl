@@ -54,8 +54,8 @@ def trace_hierarchical_ray(
     fine_network,
     positions,
     directions,
-    coarse_sample_points,
-    fine_sample_points,
+    num_coarse_sample_points,
+    num_fine_sample_points,
     t_near,
     t_far,
 ):
@@ -67,14 +67,9 @@ def trace_hierarchical_ray(
     t_far = t_far.to(device)
 
     batch_size = positions.shape[0]
-    assert positions.shape[0] == directions.shape[0]
-    assert t_near.shape[0] == batch_size
-    assert len(t_near.shape) == 1
-    assert t_far.shape[0] == batch_size
-    assert len(t_far.shape) == 1
 
     coarse_stratified_sample_times = compute_stratified_sample_points(
-        device, batch_size, coarse_sample_points + 1, t_near, t_far
+        device, batch_size, num_coarse_sample_points + 1, t_near, t_far
     )
     coarse_color, _, stopping_probs = trace_ray(
         device,
@@ -82,13 +77,13 @@ def trace_hierarchical_ray(
         coarse_network,
         positions,
         directions,
-        coarse_sample_points,
+        num_coarse_sample_points,
         t_near,
         t_far,
     )
 
     inverse_transform_sample_times = inverse_transform_sampling(
-        device, stopping_probs, coarse_stratified_sample_times, fine_sample_points
+        device, stopping_probs, coarse_stratified_sample_times, num_fine_sample_points
     )
 
     fine_sample_times, _ = torch.sort(
@@ -104,7 +99,7 @@ def trace_hierarchical_ray(
         fine_network,
         positions,
         directions,
-        coarse_sample_points + fine_sample_points,
+        num_coarse_sample_points + num_fine_sample_points,
         t_near,
         t_far,
     )
@@ -121,17 +116,10 @@ t_near: tensor dims = (batch_size)
 t_far: tensor dims = (batch_size)
 """
 
-@torch.compile
 def trace_ray(
     device, stratified_sample_times, network, positions, directions, n, t_near, t_far
 ):
     batch_size = positions.shape[0]
-
-    """assert positions.shape[0] == directions.shape[0]
-    assert t_near.shape[0] == batch_size
-    assert len(t_near.shape) == 1
-    assert t_far.shape[0] == batch_size
-    assert len(t_far.shape) == 1"""
 
     stratified_sample_points_centered_at_the_origin = stratified_sample_times.view(
         batch_size, n + 1, 1
