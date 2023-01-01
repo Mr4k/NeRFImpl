@@ -3,8 +3,6 @@ import torch
 
 from torch.distributions import Categorical
 
-import random
-
 from nerf import get_camera_position, generate_rays, trace_hierarchical_ray
 
 
