@@ -38,7 +38,7 @@ def train(data_path, snapshot_iters):
 
     # (batch size, 3)
     scale = 5.0
-    batch_size = 4096
+    batch_size = 3500
 
     config = load_config_file(os.path.join(data_path, "transforms_train.json"))
     transformation_matricies = []
