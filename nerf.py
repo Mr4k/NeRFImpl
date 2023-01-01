@@ -149,7 +149,7 @@ def trace_ray(
     colors = colors.reshape(batch_size, n + 1, 3)
     opacity = opacity.reshape(batch_size, n + 1)
 
-    cum_partial_passthrough_sum = torch.zeros(batch_size, device=device)
+    neg_cum_partial_passthrough_sum = torch.zeros(batch_size, device=device)
 
     # a tensor that gives the probablity of the ray terminating in the nth bin
     # note this is really only need for the course network
@@ -164,7 +164,7 @@ def trace_ray(
     for i in range(n):
         delta = stratified_sample_times[:, i + 1] - stratified_sample_times[:, i]
         prob_hit_current_bin = 1 - torch.exp(-opacity[:, i] * delta)
-        cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
+        cum_passthrough_prob = torch.exp(neg_cum_partial_passthrough_sum)
 
         stopping_probs[:, i] = cum_passthrough_prob * prob_hit_current_bin
 
@@ -172,11 +172,11 @@ def trace_ray(
 
         cum_expected_distance += stopping_probs[:, i] * distance_acc
 
-        cum_partial_passthrough_sum += opacity[:, i] * delta
+        neg_cum_partial_passthrough_sum -= opacity[:, i] * delta
         distance_acc += delta
 
     # add far plane
-    cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
+    cum_passthrough_prob = torch.exp(neg_cum_partial_passthrough_sum)
     cum_expected_distance += cum_passthrough_prob * t_far
 
     return (
