@@ -32,8 +32,8 @@ t_far: tensor dims = (batch_size)
 def compute_stratified_sample_points(device, batch_size, n, t_near, t_far):
     bin_width = t_far - t_near
     return (
-        torch.tensor(t_near).to(device).reshape(-1, 1).repeat(1, n)
-        + bin_width.reshape(-1, 1)
+        torch.tensor(t_near).to(device).view(-1, 1).repeat(1, n)
+        + bin_width.view(-1, 1)
         * (torch.rand((batch_size, n), device=device) + torch.arange(n, device=device).repeat(batch_size, 1))
         / n
     )
@@ -133,12 +133,12 @@ def trace_ray(
     assert t_far.shape[0] == batch_size
     assert len(t_far.shape) == 1
 
-    stratified_sample_points_centered_at_the_origin = stratified_sample_times.reshape(
+    stratified_sample_points_centered_at_the_origin = stratified_sample_times.view(
         batch_size, n + 1, 1
-    ).repeat(1, 1, 3) * directions.reshape(batch_size, 1, -1).repeat(1, n + 1, 1)
+    ).repeat(1, 1, 3) * directions.view(batch_size, 1, -1).repeat(1, n + 1, 1)
     stratified_sample_points = (
         stratified_sample_points_centered_at_the_origin
-        + positions.reshape(batch_size, 1, -1).repeat(1, n + 1, 1)
+        + positions.view(batch_size, 1, -1).repeat(1, n + 1, 1)
     )
 
     colors, opacity = get_network_output(
@@ -146,10 +146,10 @@ def trace_ray(
         stratified_sample_points.view(-1, 3),
         directions.repeat_interleave(n + 1, dim=0),
     )
-    colors = colors.reshape(batch_size, n + 1, 3)
-    opacity = opacity.reshape(batch_size, n + 1)
+    colors = colors.view(batch_size, n + 1, 3)
+    opacity = opacity.view(batch_size, n + 1)
 
-    neg_cum_partial_passthrough_sum = torch.zeros(batch_size, device=device)
+    cum_partial_passthrough_sum = torch.zeros(batch_size, device=device)
 
     # a tensor that gives the probablity of the ray terminating in the nth bin
     # note this is really only need for the course network
@@ -164,19 +164,19 @@ def trace_ray(
     for i in range(n):
         delta = stratified_sample_times[:, i + 1] - stratified_sample_times[:, i]
         prob_hit_current_bin = 1 - torch.exp(-opacity[:, i] * delta)
-        cum_passthrough_prob = torch.exp(neg_cum_partial_passthrough_sum)
+        cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
 
         stopping_probs[:, i] = cum_passthrough_prob * prob_hit_current_bin
 
-        cum_color += stopping_probs[:, i].reshape(-1, 1).repeat(1, 3) * colors[:, i]
+        cum_color += stopping_probs[:, i].view(-1, 1).repeat(1, 3) * colors[:, i]
 
         cum_expected_distance += stopping_probs[:, i] * distance_acc
 
-        neg_cum_partial_passthrough_sum -= opacity[:, i] * delta
+        cum_partial_passthrough_sum += opacity[:, i] * delta
         distance_acc += delta
 
     # add far plane
-    cum_passthrough_prob = torch.exp(neg_cum_partial_passthrough_sum)
+    cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
     cum_expected_distance += cum_passthrough_prob * t_far
 
     return (
@@ -221,7 +221,7 @@ def generate_rays(fov, camera_rotation_matrix, screen_points, aspect_ratio=1):
     z = torch.tensor([1.0]).repeat(batch_size)
     ray = torch.stack([x, y, z], dim=-1)
     ray = torch.mm(ray, camera_rotation_matrix)
-    ray /= ray.norm(dim=1).reshape(-1, 1).repeat(1, 3)
+    ray /= ray.norm(dim=1).view(-1, 1).repeat(1, 3)
     return -ray
 
 
