@@ -161,9 +161,9 @@ def trace_ray(
 
     # TODO (getting rid of this for loop likely speeds up rendering)
     # on second thought maybe not, bottleneck will eventually likely be get_network_output
+    deltas = stratified_sample_times[:, 1:i + 1] - stratified_sample_times[:, 0:i]
     for i in range(n):
-        delta = stratified_sample_times[:, i + 1] - stratified_sample_times[:, i]
-        prob_hit_current_bin = 1 - torch.exp(-opacity[:, i] * delta)
+        prob_hit_current_bin = 1 - torch.exp(-opacity[:, i] * deltas[i])
         cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
 
         stopping_probs[:, i] = cum_passthrough_prob * prob_hit_current_bin
@@ -172,8 +172,8 @@ def trace_ray(
 
         cum_expected_distance += stopping_probs[:, i] * distance_acc
 
-        cum_partial_passthrough_sum += opacity[:, i] * delta
-        distance_acc += delta
+        cum_partial_passthrough_sum += opacity[:, i] * deltas[i]
+        distance_acc += deltas[i]
 
     # add far plane
     cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
