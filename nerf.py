@@ -161,6 +161,7 @@ def trace_ray(
 
     # TODO (getting rid of this for loop likely speeds up rendering)
     # on second thought maybe not, bottleneck will eventually likely be get_network_output
+    print(stratified_sample_times.shape)
     deltas = stratified_sample_times[:, 1:-1] - stratified_sample_times[:, 0:-2]
     for i in range(n):
         prob_hit_current_bin = 1 - torch.exp(-opacity[:, i] * deltas[:, i])
