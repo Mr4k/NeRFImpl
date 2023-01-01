@@ -121,17 +121,17 @@ t_near: tensor dims = (batch_size)
 t_far: tensor dims = (batch_size)
 """
 
-
+@torch.compile
 def trace_ray(
     device, stratified_sample_times, network, positions, directions, n, t_near, t_far
 ):
     batch_size = positions.shape[0]
 
-    assert positions.shape[0] == directions.shape[0]
+    """assert positions.shape[0] == directions.shape[0]
     assert t_near.shape[0] == batch_size
     assert len(t_near.shape) == 1
     assert t_far.shape[0] == batch_size
-    assert len(t_far.shape) == 1
+    assert len(t_far.shape) == 1"""
 
     stratified_sample_points_centered_at_the_origin = stratified_sample_times.view(
         batch_size, n + 1, 1
@@ -161,9 +161,9 @@ def trace_ray(
 
     # TODO (getting rid of this for loop likely speeds up rendering)
     # on second thought maybe not, bottleneck will eventually likely be get_network_output
-    deltas = stratified_sample_times[:, 1:] - stratified_sample_times[:, 0:-1]
     for i in range(n):
-        prob_hit_current_bin = 1 - torch.exp(-opacity[:, i] * deltas[:, i])
+        delta = stratified_sample_times[:, i + 1] - stratified_sample_times[:, i]
+        prob_hit_current_bin = 1 - torch.exp(-opacity[:, i] * delta)
         cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
 
         stopping_probs[:, i] = cum_passthrough_prob * prob_hit_current_bin
@@ -172,8 +172,8 @@ def trace_ray(
 
         cum_expected_distance += stopping_probs[:, i] * distance_acc
 
-        cum_partial_passthrough_sum += opacity[:, i] * deltas[:, i]
-        distance_acc += deltas[:, i]
+        cum_partial_passthrough_sum += opacity[:, i] * delta
+        distance_acc += delta
 
     # add far plane
     cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
