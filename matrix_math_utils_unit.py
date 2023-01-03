@@ -10,7 +10,9 @@ class TestMatrixMathUtils(unittest.TestCase):
         scale = 5
 
         for _ in range(1000):
-            transformation_matrix = generate_random_hemisphere_gimbal_transformation_matrix(scale)
+            transformation_matrix = (
+                generate_random_hemisphere_gimbal_transformation_matrix(scale)
+            )
             point = get_camera_position(transformation_matrix)
             center_ray = generate_rays(
                 torch.tensor(torch.pi * 45 / 180),

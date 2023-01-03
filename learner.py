@@ -84,12 +84,18 @@ def train(args):
 
     num_steps = 100000
     novel_view_transformation_matricies = [
-        generate_random_hemisphere_gimbal_transformation_matrix(scale) for _ in range(10)
+        generate_random_hemisphere_gimbal_transformation_matrix(scale)
+        for _ in range(10)
     ]
     loss_at_last_snapshot = -1
     for step in range(num_steps):
-        take_snapshot_iter = args.snapshot_iters >= 0 and step % args.snapshot_iters == 0
-        take_snapshot_loss = args.snapshot_train_loss_percentage >= 0 and (loss_at_last_snapshot < 0 or loss < loss_at_last_snapshot * args.snapshot_train_loss_percentage)
+        take_snapshot_iter = (
+            args.snapshot_iters >= 0 and step % args.snapshot_iters == 0
+        )
+        take_snapshot_loss = args.snapshot_train_loss_percentage >= 0 and (
+            loss_at_last_snapshot < 0
+            or loss < loss_at_last_snapshot * args.snapshot_train_loss_percentage
+        )
 
         camera_poses, rays, distance_to_depth_modifiers, expected_colors = sample_batch(
             batch_size,
@@ -128,7 +134,9 @@ def train(args):
             for i, novel_view_transformation_matrix in enumerate(
                 novel_view_transformation_matricies
             ):
-                print(f"rendering snapshot from view {i} at step {step} with loss {loss}")
+                print(
+                    f"rendering snapshot from view {i} at step {step} with loss {loss}"
+                )
                 size = 200
 
                 with torch.no_grad():
@@ -186,7 +194,10 @@ def train(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run NeRF")
-    parser.add_argument("--train_path", help="directiory containing the desired transforms_train.json file")
+    parser.add_argument(
+        "--train_path",
+        help="directiory containing the desired transforms_train.json file",
+    )
     parser.add_argument(
         "--snapshot_iters",
         type=int,
@@ -195,8 +206,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--snapshot_train_loss_percentage",
-        type=int,
-        help="if the loss is < percentage / 100 * last snapshot loss, take a snapshot. Negative means don't do snapshots based on this",
+        type=float,
+        help="if the loss is < percentage * last snapshot loss, take a snapshot. Negative means don't do snapshots based on this",
         default=-1,
     )
     parser.add_argument(
@@ -207,5 +218,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     if args.snapshot_iter >= 0 and args.snapshot_train_loss_percentage >= 0:
-        print("Error cannot have both snapshot_iter and snapshot_train_loss_percentage active at the same time")
+        print(
+            "Error cannot have both snapshot_iter and snapshot_train_loss_percentage active at the same time"
+        )
     train(args)

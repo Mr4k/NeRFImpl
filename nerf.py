@@ -34,7 +34,10 @@ def compute_stratified_sample_points(device, batch_size, n, t_near, t_far):
     return (
         torch.tensor(t_near).to(device).view(-1, 1).repeat(1, n)
         + bin_width.view(-1, 1)
-        * (torch.rand((batch_size, n), device=device) + torch.arange(n, device=device).repeat(batch_size, 1))
+        * (
+            torch.rand((batch_size, n), device=device)
+            + torch.arange(n, device=device).repeat(batch_size, 1)
+        )
         / n
     )
 
@@ -115,6 +118,7 @@ n: int
 t_near: tensor dims = (batch_size)
 t_far: tensor dims = (batch_size)
 """
+
 
 def trace_ray(
     device, stratified_sample_times, network, positions, directions, n, t_near, t_far

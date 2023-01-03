@@ -4,6 +4,7 @@ import torch
 points: tensor dim = (num points, space_dim)
 """
 
+
 class NerfModel(torch.nn.Module):
     def __init__(self, scale, device):
         super(NerfModel, self).__init__()
@@ -18,8 +19,12 @@ class NerfModel(torch.nn.Module):
         dir_input_dims = self.l_dir * 2 * 3
 
         self.scalers = {
-            self.l_pos: torch.pow(2, torch.arange(0, self.l_pos, 1, device=device)).repeat_interleave(3),
-            self.l_dir: torch.pow(2, torch.arange(0, self.l_dir, 1, device=device)).repeat_interleave(3)
+            self.l_pos: torch.pow(
+                2, torch.arange(0, self.l_pos, 1, device=device)
+            ).repeat_interleave(3),
+            self.l_dir: torch.pow(
+                2, torch.arange(0, self.l_dir, 1, device=device)
+            ).repeat_interleave(3),
         }
 
         self.linear1 = torch.nn.Linear(pos_input_dims, 256)
@@ -39,7 +44,7 @@ class NerfModel(torch.nn.Module):
 
     def embed_tensor(self, points, l):
         embeddings = points.repeat(1, l)
-    
+
         # TODO unknown if this different ordering will be a problem with learning
         sin_embeddings = torch.sin(embeddings * self.scalers[l][None, :] * torch.pi)
         cos_embeddings = torch.cos(embeddings * self.scalers[l][None, :] * torch.pi)
