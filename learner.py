@@ -40,7 +40,7 @@ def train(args):
     scale = 5.0
     batch_size = 3500
 
-    config = load_config_file(os.path.join(args.data_path, "transforms_train.json"))
+    config = load_config_file(os.path.join(args.train_path, "transforms_train.json"))
     transformation_matricies = []
     images = []
     fov = None
@@ -53,7 +53,7 @@ def train(args):
         transformation_matricies.append(transformation_matrix)
         image_src = f["file_path"] + ".png"
         pixels = (
-            torch.tensor(iio.imread(os.path.join(args.data_path, image_src)))[:, :, :3]
+            torch.tensor(iio.imread(os.path.join(args.train_path, image_src)))[:, :, :3]
             .transpose(0, 1)
             .flip([0])
             .float()
@@ -217,7 +217,7 @@ if __name__ == "__main__":
         default=5,
     )
     args = parser.parse_args()
-    if args.snapshot_iter >= 0 and args.snapshot_train_loss_percentage >= 0:
+    if args.snapshot_iters >= 0 and args.snapshot_train_loss_percentage >= 0:
         print(
             "Error cannot have both snapshot_iter and snapshot_train_loss_percentage active at the same time"
         )
