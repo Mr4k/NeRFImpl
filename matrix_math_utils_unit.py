@@ -1,16 +1,16 @@
 import unittest
 import torch
 
-from matrix_math_utils import generate_random_gimbal_transformation_matrix
+from matrix_math_utils import generate_random_hemisphere_gimbal_transformation_matrix
 from nerf import generate_rays, get_camera_position
 
 
 class TestMatrixMathUtils(unittest.TestCase):
-    def test_generate_random_gimbal_transformation(self):
+    def test_generate_random_hemisphere_gimbal_transformation_matrix(self):
         scale = 5
 
         for _ in range(1000):
-            transformation_matrix = generate_random_gimbal_transformation_matrix(scale)
+            transformation_matrix = generate_random_hemisphere_gimbal_transformation_matrix(scale)
             point = get_camera_position(transformation_matrix)
             center_ray = generate_rays(
                 torch.tensor(torch.pi * 45 / 180),

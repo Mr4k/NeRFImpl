@@ -299,7 +299,7 @@ class TestNerfInt(unittest.TestCase):
             print("no cuda acceleration available. Skipping test")
             self.skipTest("no cuda acceleration available")
 
-        batch_size = 3000
+        batch_size = 4096
         near = 0.5
         far = 7
 
@@ -307,14 +307,21 @@ class TestNerfInt(unittest.TestCase):
         coarse_network = NerfModel(5.0, device).to(device)
         fine_network = NerfModel(5.0, device).to(device)
 
-        camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
-            batch_size,
-            200,
-            transform_matricies,
-            images,
-            fov,
-        )
+        def trace_handler(prof):
+            print(prof.key_averages(group_by_stack_n=5).table(
+                sort_by="cpu_time_total", row_limit=5
+            ))
 
+        print("cuda acceleration available. Using cuda")
+
+        camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
+                        batch_size,
+                        200,
+                        transform_matricies,
+                        images,
+                        fov,
+                    )
+    
         _, _, _ = render_rays(
             batch_size,
             camera_poses,
@@ -327,38 +334,33 @@ class TestNerfInt(unittest.TestCase):
             device,
         )
 
-        camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
-            batch_size,
-            200,
-            transform_matricies,
-            images,
-            fov,
-        )
-
-        print("cuda acceleration available. Using cuda")
         with profile(
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
             with_stack=True,
+            on_trace_ready=trace_handler
         ) as prof:
-            with record_function("train_loop"):
-                depth, colors, _ = render_rays(
-                    batch_size,
-                    camera_poses,
-                    rays,
-                    distance_to_depth_modifiers,
-                    near,
-                    far,
-                    coarse_network,
-                    fine_network,
-                    device,
-                )
-            self.assertEqual(depth.shape, torch.Size([batch_size]))
-            self.assertEqual(colors.shape, torch.Size([batch_size, 3]))
-        print(
-            prof.key_averages(group_by_stack_n=5).table(
-                sort_by="cpu_time_total", row_limit=5
-            )
-        )
+                with record_function("train_loop"):
+                    camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
+                        batch_size,
+                        200,
+                        transform_matricies,
+                        images,
+                        fov,
+                    )
+                    depth, colors, _ = render_rays(
+                        batch_size,
+                        camera_poses,
+                        rays,
+                        distance_to_depth_modifiers,
+                        near,
+                        far,
+                        coarse_network,
+                        fine_network,
+                        device,
+                    )
+                self.assertEqual(depth.shape, torch.Size([batch_size]))
+                self.assertEqual(colors.shape, torch.Size([batch_size, 3]))
+                prof.step()
 
 
 if __name__ == "__main__":

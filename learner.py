@@ -3,7 +3,7 @@ import torch
 import wandb
 from batch_and_sampler import render_image, render_rays, sample_batch
 from matrix_math_utils import (
-    generate_random_gimbal_transformation_matrix,
+    generate_random_hemisphere_gimbal_transformation_matrix,
 )
 from nerf import load_config_file
 
@@ -21,7 +21,7 @@ from itertools import chain
 import argparse
 
 
-def train(data_path, snapshot_iters):
+def train(args):
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
 
@@ -40,7 +40,7 @@ def train(data_path, snapshot_iters):
     scale = 5.0
     batch_size = 3500
 
-    config = load_config_file(os.path.join(data_path, "transforms_train.json"))
+    config = load_config_file(os.path.join(args.data_path, "transforms_train.json"))
     transformation_matricies = []
     images = []
     fov = None
@@ -53,7 +53,7 @@ def train(data_path, snapshot_iters):
         transformation_matricies.append(transformation_matrix)
         image_src = f["file_path"] + ".png"
         pixels = (
-            torch.tensor(iio.imread(os.path.join(data_path, image_src)))[:, :, :3]
+            torch.tensor(iio.imread(os.path.join(args.data_path, image_src)))[:, :, :3]
             .transpose(0, 1)
             .flip([0])
             .float()
@@ -84,14 +84,51 @@ def train(data_path, snapshot_iters):
 
     num_steps = 100000
     novel_view_transformation_matricies = [
-        generate_random_gimbal_transformation_matrix(scale) for _ in range(10)
+        generate_random_hemisphere_gimbal_transformation_matrix(scale) for _ in range(10)
     ]
+    loss_at_last_snapshot = -1
     for step in range(num_steps):
-        if step % snapshot_iters == 0:
+        take_snapshot_iter = args.snapshot_iters >= 0 and step % args.snapshot_iters == 0
+        take_snapshot_loss = args.snapshot_train_loss_percentage >= 0 and (loss_at_last_snapshot < 0 or loss < loss_at_last_snapshot * args.snapshot_train_loss_percentage)
+
+        camera_poses, rays, distance_to_depth_modifiers, expected_colors = sample_batch(
+            batch_size,
+            200,
+            transformation_matricies,
+            images,
+            fov,
+        )
+
+        optimizer.zero_grad()
+
+        _, colors, coarse_colors = render_rays(
+            batch_size,
+            camera_poses,
+            rays,
+            distance_to_depth_modifiers,
+            near,
+            far,
+            coarse_model,
+            fine_model,
+            device,
+        )
+
+        loss = loss_fn(colors.flatten(), expected_colors.flatten()) + loss_fn(
+            coarse_colors.flatten(), expected_colors.flatten()
+        )
+        loss.backward()
+
+        optimizer.step()
+        loss_at_step = loss.item()
+        print(f"loss at step {step}: {loss_at_step}")
+        wandb_log({"loss": loss_at_step, "step": step})
+
+        if take_snapshot_iter or take_snapshot_loss:
+            loss_at_last_snapshot = loss
             for i, novel_view_transformation_matrix in enumerate(
                 novel_view_transformation_matricies
             ):
-                print(f"rendering snapshot from view {i} at step {step}")
+                print(f"rendering snapshot from view {i} at step {step} with loss {loss}")
                 size = 200
 
                 with torch.no_grad():
@@ -146,46 +183,29 @@ def train(data_path, snapshot_iters):
                 print("saved snapshot")
                 optimizer.zero_grad()
 
-        camera_poses, rays, distance_to_depth_modifiers, expected_colors = sample_batch(
-            batch_size,
-            200,
-            transformation_matricies,
-            images,
-            fov,
-        )
-
-        optimizer.zero_grad()
-
-        _, colors, coarse_colors = render_rays(
-            batch_size,
-            camera_poses,
-            rays,
-            distance_to_depth_modifiers,
-            near,
-            far,
-            coarse_model,
-            fine_model,
-            device,
-        )
-
-        loss = loss_fn(colors.flatten(), expected_colors.flatten()) + loss_fn(
-            coarse_colors.flatten(), expected_colors.flatten()
-        )
-        loss.backward()
-
-        optimizer.step()
-        loss_at_step = loss.item()
-        print(f"loss at step {step}: {loss_at_step}")
-        wandb_log({"loss": loss_at_step, "step": step})
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run NeRF")
-    parser.add_argument("--train_path", help="the train path")
+    parser.add_argument("--train_path", help="directiory containing the desired transforms_train.json file")
     parser.add_argument(
         "--snapshot_iters",
         type=int,
-        help="the number of iterations after which to take a snapshot",
+        help="the number of iterations after which to take a snapshot. Negative means don't do snapshots based on number of iterations",
+        default=-1,
+    )
+    parser.add_argument(
+        "--snapshot_train_loss_percentage",
+        type=int,
+        help="if the loss is < percentage / 100 * last snapshot loss, take a snapshot. Negative means don't do snapshots based on this",
+        default=-1,
+    )
+    parser.add_argument(
+        "--number_of_novel_views",
+        type=int,
+        help="the number of novel views to render on snapshot",
+        default=5,
     )
     args = parser.parse_args()
-    train(args.train_path, args.snapshot_iters)
+    if args.snapshot_iter >= 0 and args.snapshot_train_loss_percentage >= 0:
+        print("Error cannot have both snapshot_iter and snapshot_train_loss_percentage active at the same time")
+    train(args)
