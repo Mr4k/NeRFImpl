@@ -3,6 +3,9 @@ import torch
 
 from wandb_wrapper import wandb_init, wandb_log
 
+import imageio.v3 as iio
+
+import os
 
 def inverse_transform_sampling(device, stopping_probs, bin_boundary_points, n):
     batch_size, _ = stopping_probs.shape
@@ -180,15 +183,43 @@ def trace_ray(
     )
 
 
-def load_config_file(path):
-    with open(path) as f:
+def load_config_file(data_path, type):
+    with open(os.path.join(data_path, f"transforms_{type}.json")) as f:
         config = json.load(f)
         if "frames" not in config:
             raise Exception(
-                f"keyword 'frames' not found in config file at path: {path}"
+                f"keyword 'frames' not found in config file at path: {data_path}"
             )
-        return config
-    pass
+    transformation_matricies = []
+    images = []
+    fov = None
+    if "camera_angle_x" in config:
+        fov = torch.tensor(config["camera_angle_x"])
+    for f in config["frames"]:
+        transformation_matrix = torch.tensor(
+            f["transform_matrix"], dtype=torch.float
+        ).t()
+        transformation_matricies.append(transformation_matrix)
+        image_src = f["file_path"] + ".png"
+        pixels = (
+            torch.tensor(iio.imread(os.path.join(data_path, image_src)))[:, :, :3]
+            .transpose(0, 1)
+            .flip([0])
+            .float()
+            / 255.0
+        )
+
+        pixels /= torch.max(pixels)
+        width, height, channels = pixels.shape
+
+        assert width == height
+        assert channels == 3
+
+        images.append(pixels)
+
+    transformation_matricies = torch.stack(transformation_matricies)
+    images = torch.stack(images)
+    return fov, images, transformation_matricies
 
 
 """

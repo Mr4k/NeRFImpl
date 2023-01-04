@@ -9,9 +9,6 @@ from nerf import load_config_file
 
 from neural_nerf import NerfModel
 
-import imageio.v3 as iio
-import imageio
-
 import os
 
 from wandb_wrapper import wandb_init, wandb_log
@@ -19,6 +16,8 @@ from wandb_wrapper import wandb_init, wandb_log
 from itertools import chain
 
 import argparse
+
+import imageio
 
 
 def train(args):
@@ -40,36 +39,8 @@ def train(args):
     scale = 5.0
     batch_size = 3500
 
-    config = load_config_file(os.path.join(args.train_path, "transforms_train.json"))
-    transformation_matricies = []
-    images = []
-    fov = None
-    if "camera_angle_x" in config:
-        fov = torch.tensor(config["camera_angle_x"])
-    for f in config["frames"]:
-        transformation_matrix = torch.tensor(
-            f["transform_matrix"], dtype=torch.float
-        ).t()
-        transformation_matricies.append(transformation_matrix)
-        image_src = f["file_path"] + ".png"
-        pixels = (
-            torch.tensor(iio.imread(os.path.join(args.train_path, image_src)))[:, :, :3]
-            .transpose(0, 1)
-            .flip([0])
-            .float()
-            / 255.0
-        )
-
-        pixels /= torch.max(pixels)
-        width, height, channels = pixels.shape
-
-        assert width == height
-        assert channels == 3
-
-        images.append(pixels)
-
-    transformation_matricies = torch.stack(transformation_matricies)
-    images = torch.stack(images)
+    train_fov, train_images, train_transformation_matricies = load_config_file(os.path.join(args.data_path), "train")
+    _, _, val_transformation_matricies = load_config_file(os.path.join(args.data_path), "val")
 
     near = 0.5
     far = 7
@@ -83,18 +54,14 @@ def train(args):
     )
 
     num_steps = 100000
-    novel_view_transformation_matricies = [
-        generate_random_hemisphere_gimbal_transformation_matrix(scale)
-        for _ in range(args.number_of_novel_views)
-    ]
     loss_at_last_snapshot = -1
     for step in range(num_steps):
         camera_poses, rays, distance_to_depth_modifiers, expected_colors = sample_batch(
             batch_size,
             200,
-            transformation_matricies,
-            images,
-            fov,
+            train_transformation_matricies,
+            train_images,
+            train_fov,
         )
 
         optimizer.zero_grad()
@@ -131,9 +98,7 @@ def train(args):
 
         if take_snapshot_iter or take_snapshot_loss:
             loss_at_last_snapshot = loss
-            for i, novel_view_transformation_matrix in enumerate(
-                novel_view_transformation_matricies
-            ):
+            for i, transformation_matrix in enumerate(list(val_transformation_matricies[0:args.number_of_validation_views])):
                 print(
                     f"rendering snapshot from view {i} at step {step} with loss {loss}"
                 )
@@ -142,8 +107,8 @@ def train(args):
                 with torch.no_grad():
                     depth_image, color_image, coarse_color_image = render_image(
                         size,
-                        novel_view_transformation_matrix,
-                        fov,
+                        transformation_matrix,
+                        train_fov,
                         near,
                         far,
                         coarse_model,
@@ -195,7 +160,7 @@ def train(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run NeRF")
     parser.add_argument(
-        "--train_path",
+        "--data_path",
         help="directiory containing the desired transforms_train.json file",
     )
     parser.add_argument(
@@ -211,9 +176,9 @@ if __name__ == "__main__":
         default=-1,
     )
     parser.add_argument(
-        "--number_of_novel_views",
+        "--number_of_validation_views",
         type=int,
-        help="the number of novel views to render on snapshot",
+        help="the number of validation views to render on snapshot",
         default=5,
     )
     args = parser.parse_args()
