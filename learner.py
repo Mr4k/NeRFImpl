@@ -35,6 +35,8 @@ def train(args):
     print(f"creating output dir: {out_dir}")
     os.makedirs(out_dir)
 
+    background_color = torch.tensor([1, 1, 1.0])
+
     # (batch size, 3)
     scale = 5.0
     batch_size = 3500
@@ -55,6 +57,7 @@ def train(args):
 
     num_steps = 100000
     loss_at_last_snapshot = -1
+    last_snapshot_iter = -1
     for step in range(num_steps):
         camera_poses, rays, distance_to_depth_modifiers, expected_colors = sample_batch(
             batch_size,
@@ -76,6 +79,7 @@ def train(args):
             coarse_model,
             fine_model,
             device,
+            background_color,
         )
 
         loss = loss_fn(colors.flatten(), expected_colors.flatten()) + loss_fn(
@@ -89,7 +93,7 @@ def train(args):
         #wandb_log({"loss": loss_at_step, "step": step})
 
         take_snapshot_iter = (
-            args.snapshot_iters >= 0 and step % args.snapshot_iters == 0
+            args.snapshot_iters >= 0 and (last_snapshot_iter < 0 or step - last_snapshot_iter >= args.snapshot_iters)
         )
         take_snapshot_loss = args.snapshot_train_loss_percentage >= 0 and (
             loss_at_last_snapshot < 0
@@ -98,6 +102,7 @@ def train(args):
 
         if take_snapshot_iter or take_snapshot_loss:
             loss_at_last_snapshot = loss
+            last_snapshot_iter = step
             for i, transformation_matrix in enumerate(list(val_transformation_matricies[0:args.number_of_validation_views])):
                 print(
                     f"rendering snapshot from view {i} at step {step} with loss {loss}"
@@ -114,6 +119,7 @@ def train(args):
                         coarse_model,
                         fine_model,
                         device,
+                        background_color
                     )
 
                 out_depth_image = (
@@ -166,7 +172,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--snapshot_iters",
         type=int,
-        help="the number of iterations after which to take a snapshot. Negative means don't do snapshots based on number of iterations",
+        help="the max number of iterations since the last snapshot after which to take a snapshot. Negative means don't do snapshots based on number of iterations",
         default=-1,
     )
     parser.add_argument(
@@ -182,8 +188,4 @@ if __name__ == "__main__":
         default=5,
     )
     args = parser.parse_args()
-    if args.snapshot_iters >= 0 and args.snapshot_train_loss_percentage >= 0:
-        print(
-            "Error cannot have both snapshot_iter and snapshot_train_loss_percentage active at the same time"
-        )
     train(args)

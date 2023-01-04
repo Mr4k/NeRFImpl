@@ -7,7 +7,7 @@ from nerf import get_camera_position, generate_rays, trace_hierarchical_ray
 
 
 def render_image(
-    size, transformation_matrix, fov, near, far, coarse_network, fine_network, device
+    size, transformation_matrix, fov, near, far, coarse_network, fine_network, device, background_color
 ):
     total_rays = size * size
     batch_size = 4096
@@ -50,6 +50,7 @@ def render_image(
             coarse_network,
             fine_network,
             device,
+            background_color,
         )
         batch_fine_depths.append(fine_depths)
         batch_fine_colors.append(fine_colors)
@@ -72,6 +73,7 @@ def render_rays(
     coarse_network,
     fine_network,
     device,
+    background_color,
 ):
     nears = torch.tensor(near).repeat(batch_size) / distance_to_depth_modifiers
     fars = torch.tensor(far).repeat(batch_size) / distance_to_depth_modifiers
@@ -85,6 +87,7 @@ def render_rays(
         128,
         nears,
         fars,
+        background_color,
     )
     depth = fine_dist * distance_to_depth_modifiers
 

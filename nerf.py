@@ -62,6 +62,7 @@ def trace_hierarchical_ray(
     num_fine_sample_points,
     t_near,
     t_far,
+    background_color,
 ):
     coarse_network = coarse_network.to(device)
     fine_network = fine_network.to(device)
@@ -69,6 +70,7 @@ def trace_hierarchical_ray(
     directions = directions.to(device)
     t_near = t_near.to(device)
     t_far = t_far.to(device)
+    background_color = background_color.to(device)
 
     batch_size = positions.shape[0]
 
@@ -84,6 +86,7 @@ def trace_hierarchical_ray(
         num_coarse_sample_points,
         t_near,
         t_far,
+        background_color,
     )
 
     inverse_transform_sample_times = inverse_transform_sampling(
@@ -106,6 +109,7 @@ def trace_hierarchical_ray(
         num_coarse_sample_points + num_fine_sample_points,
         t_near,
         t_far,
+        background_color,
     )
 
     return fine_color.cpu(), fine_depth.cpu(), coarse_color.cpu()
@@ -118,11 +122,12 @@ directions: tensor dims = (batch_size, 3)
 n: int
 t_near: tensor dims = (batch_size)
 t_far: tensor dims = (batch_size)
+background_color = (3)
 """
 
 
 def trace_ray(
-    device, stratified_sample_times, network, positions, directions, n, t_near, t_far
+    device, stratified_sample_times, network, positions, directions, n, t_near, t_far, background_color
 ):
     batch_size = positions.shape[0]
 
@@ -171,6 +176,7 @@ def trace_ray(
     # add far plane
     cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
     cum_expected_distance += cum_passthrough_prob * t_far
+    cum_color += cum_passthrough_prob.view(-1, 1).matmul(background_color.view(1, 3))
 
     return (
         cum_color,
