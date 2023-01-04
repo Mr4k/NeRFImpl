@@ -1,6 +1,6 @@
 import uuid
 import torch
-import wandb
+#import wandb
 from batch_and_sampler import render_image, render_rays, sample_batch
 from matrix_math_utils import (
     generate_random_hemisphere_gimbal_transformation_matrix,
@@ -11,7 +11,7 @@ from neural_nerf import NerfModel
 
 import os
 
-from wandb_wrapper import wandb_init, wandb_log
+#from wandb_wrapper import wandb_init, wandb_log
 
 from itertools import chain
 
@@ -86,7 +86,7 @@ def train(args):
         optimizer.step()
         loss_at_step = loss.item()
         print(f"loss at step {step}: {loss_at_step}")
-        wandb_log({"loss": loss_at_step, "step": step})
+        #wandb_log({"loss": loss_at_step, "step": step})
 
         take_snapshot_iter = (
             args.snapshot_iters >= 0 and step % args.snapshot_iters == 0
