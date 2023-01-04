@@ -69,6 +69,8 @@ def train(args):
 
         optimizer.zero_grad()
 
+        # train with a black background to avoid getting stuck in local minima
+        black_background_color = torch.tensor([0.0, 0, 0])
         _, colors, coarse_colors = render_rays(
             batch_size,
             camera_poses,
@@ -79,7 +81,7 @@ def train(args):
             coarse_model,
             fine_model,
             device,
-            background_color,
+            black_background_color,
         )
 
         loss = loss_fn(colors.flatten(), expected_colors.flatten()) + loss_fn(
