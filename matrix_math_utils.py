@@ -12,12 +12,12 @@ def generate_rot_x(angle):
     ).t()
 
 
-def generate_rot_z(angle):
+def generate_rot_y(angle):
     return torch.tensor(
         [
-            [torch.cos(angle), -torch.sin(angle), 0, 0],
-            [torch.sin(angle), torch.cos(angle), 0, 0],
-            [0, 0, 1, 0],
+            [torch.cos(angle), torch.sin(angle), 0, 0],
+            [0, 1, 0, 0],
+            [-torch.sin(angle), 0, torch.cos(angle), 0],
             [0, 0, 0, 1],
         ]
     ).t()
@@ -33,7 +33,7 @@ def generate_random_hemisphere_gimbal_transformation_matrix(scale):
     return torch.matmul(
         torch.matmul(
             generate_translation(torch.tensor([0.0, 0, scale])),
-            generate_rot_x(torch.pi / 2 * torch.rand(1)),
+            generate_rot_x(-torch.pi / 2 * torch.rand(1)),
         ),
-        generate_rot_z(2 * torch.pi * torch.rand(1)),
+        generate_rot_y(2 * torch.pi * torch.rand(1)),
     )

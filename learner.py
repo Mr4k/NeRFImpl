@@ -85,18 +85,10 @@ def train(args):
     num_steps = 100000
     novel_view_transformation_matricies = [
         generate_random_hemisphere_gimbal_transformation_matrix(scale)
-        for _ in range(10)
+        for _ in range(args.number_of_novel_views)
     ]
     loss_at_last_snapshot = -1
     for step in range(num_steps):
-        take_snapshot_iter = (
-            args.snapshot_iters >= 0 and step % args.snapshot_iters == 0
-        )
-        take_snapshot_loss = args.snapshot_train_loss_percentage >= 0 and (
-            loss_at_last_snapshot < 0
-            or loss < loss_at_last_snapshot * args.snapshot_train_loss_percentage
-        )
-
         camera_poses, rays, distance_to_depth_modifiers, expected_colors = sample_batch(
             batch_size,
             200,
@@ -128,6 +120,14 @@ def train(args):
         loss_at_step = loss.item()
         print(f"loss at step {step}: {loss_at_step}")
         wandb_log({"loss": loss_at_step, "step": step})
+
+        take_snapshot_iter = (
+            args.snapshot_iters >= 0 and step % args.snapshot_iters == 0
+        )
+        take_snapshot_loss = args.snapshot_train_loss_percentage >= 0 and (
+            loss_at_last_snapshot < 0
+            or loss < loss_at_last_snapshot * args.snapshot_train_loss_percentage
+        )
 
         if take_snapshot_iter or take_snapshot_loss:
             loss_at_last_snapshot = loss
