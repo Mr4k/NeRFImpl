@@ -2,6 +2,7 @@ import json
 import torch
 
 import imageio.v3 as iio
+import imageio
 
 import os
 
@@ -186,8 +187,14 @@ def trace_ray(
         stopping_probs,
     )
 
+def replace_alpha_with_solid_color(img, background_color):
+    #(width, height, 4)
+    #(width * height, 1) x (1, 3)
+    #(width * height, 1) x (width * height, 3)
+    img = img / 255.0
+    return torch.matmul(1.0 - img[:, :, 3][:, :, None], background_color.view(1, -1)) + img[:, :, 3][:, :, None] * img[:, :, :3]
 
-def load_config_file(data_path, type):
+def load_config_file(data_path, type, background_color):
     with open(os.path.join(data_path, f"transforms_{type}.json")) as f:
         config = json.load(f)
         if "frames" not in config:
@@ -206,14 +213,9 @@ def load_config_file(data_path, type):
         transformation_matricies.append(transformation_matrix)
         image_src = f["file_path"] + ".png"
         pixels = (
-            torch.tensor(iio.imread(os.path.join(data_path, image_src)))[:, :, :3]
-            .transpose(0, 1)
-            .flip([0])
-            .float()
-            / 255.0
+            replace_alpha_with_solid_color(torch.tensor(iio.imread(os.path.join(data_path, image_src))), background_color)
         )
-
-        pixels /= torch.max(pixels)
+        #pixels /= torch.max(pixels)
         width, height, channels = pixels.shape
 
         assert width == height

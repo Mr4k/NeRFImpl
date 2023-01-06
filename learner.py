@@ -41,8 +41,8 @@ def train(args):
     scale = 5.0
     batch_size = 3500
 
-    train_fov, train_images, train_transformation_matricies = load_config_file(os.path.join(args.data_path), "train")
-    _, _, val_transformation_matricies = load_config_file(os.path.join(args.data_path), "val")
+    train_fov, train_images, train_transformation_matricies = load_config_file(os.path.join(args.data_path), "train", background_color)
+    _, _, val_transformation_matricies = load_config_file(os.path.join(args.data_path), "val", background_color)
 
     near = 0.5
     far = 7
