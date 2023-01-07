@@ -217,7 +217,6 @@ def load_config_file(data_path, type, background_color):
             .transpose(0, 1)
             .flip([0])
             .float()
-            / 255.0
         )
         #pixels /= torch.max(pixels)
         width, height, channels = pixels.shape
