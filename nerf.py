@@ -191,7 +191,7 @@ def replace_alpha_with_solid_color(img, background_color):
     #(width, height, 4)
     #(width * height, 1) x (1, 3)
     #(width * height, 1) x (width * height, 3)
-    return img[:, :, 3] / 255.0
+    return img[:, :, :3] / 255.0
     #img = img / 255.0
     #return torch.matmul(1.0 - img[:, :, 3][:, :, None], background_color.view(1, -1)) + img[:, :, 3][:, :, None] * img[:, :, :3]
 
