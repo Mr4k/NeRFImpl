@@ -214,6 +214,10 @@ def load_config_file(data_path, type, background_color):
         image_src = f["file_path"] + ".png"
         pixels = (
             replace_alpha_with_solid_color(torch.tensor(iio.imread(os.path.join(data_path, image_src))), background_color)
+            .transpose(0, 1)
+            .flip([0])
+            .float()
+            / 255.0
         )
         #pixels /= torch.max(pixels)
         width, height, channels = pixels.shape
