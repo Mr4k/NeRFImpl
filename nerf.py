@@ -191,8 +191,9 @@ def replace_alpha_with_solid_color(img, background_color):
     #(width, height, 4)
     #(width * height, 1) x (1, 3)
     #(width * height, 1) x (width * height, 3)
-    img = img / 255.0
-    return torch.matmul(1.0 - img[:, :, 3][:, :, None], background_color.view(1, -1)) + img[:, :, 3][:, :, None] * img[:, :, :3]
+    return img[:, :, 3] / 255.0
+    #img = img / 255.0
+    #return torch.matmul(1.0 - img[:, :, 3][:, :, None], background_color.view(1, -1)) + img[:, :, 3][:, :, None] * img[:, :, :3]
 
 def load_config_file(data_path, type, background_color):
     with open(os.path.join(data_path, f"transforms_{type}.json")) as f:
