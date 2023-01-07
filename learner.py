@@ -35,7 +35,7 @@ def train(args):
     print(f"creating output dir: {out_dir}")
     os.makedirs(out_dir)
 
-    background_color = torch.tensor([0, 0, 0.0])
+    background_color = torch.tensor([1.0, 1.0, 1.0])
 
     # (batch size, 3)
     scale = 5.0
