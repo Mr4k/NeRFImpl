@@ -95,9 +95,7 @@ def trace_hierarchical_ray(
     )
 
     fine_sample_times, _ = torch.sort(
-        torch.concat(
-            [coarse_stratified_sample_times, inverse_transform_sample_times], dim=1
-        ),
+        inverse_transform_sample_times,
         dim=1,
     )
 
@@ -107,7 +105,7 @@ def trace_hierarchical_ray(
         fine_network,
         positions,
         directions,
-        num_coarse_sample_points + num_fine_sample_points,
+        num_fine_sample_points - 1,
         t_near,
         t_far,
         background_color,

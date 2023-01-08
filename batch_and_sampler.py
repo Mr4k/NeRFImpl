@@ -84,7 +84,7 @@ def render_rays(
         camera_poses,
         rays,
         64,
-        128,
+        64,
         nears,
         fars,
         background_color,
