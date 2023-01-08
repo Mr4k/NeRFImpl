@@ -4,7 +4,6 @@ import torch
 from matrix_math_utils import generate_random_hemisphere_gimbal_transformation_matrix
 from nerf import generate_rays, get_camera_position
 
-
 class TestMatrixMathUtils(unittest.TestCase):
     def test_generate_random_hemisphere_gimbal_transformation_matrix(self):
         scale = 5
