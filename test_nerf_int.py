@@ -82,44 +82,20 @@ class CubeNetwork:
 
 class TestNerfInt(unittest.TestCase):
     def test_rendering_depth_e2e_with_given_network(self):
-        frames = load_config_file("./integration_test_data/cameras.json")
         near = 0.5
         far = 7
         size = 200
-        for f in frames:
-            fov = torch.tensor(f["fov"])
-            transformation_matrix = torch.tensor(
-                f["transformation_matrix"], dtype=torch.float
-            ).t()
-            image_src = f["file_path"]
+        background_color = torch.tensor([0.0, 0.0, 0.0])
 
-            fname, _ = image_src.split(".png")
-            ext = "png"
-            image_src = fname + "_depth" + "." + ext
-            color_image_src = fname + "." + ext
+        fov, color_pixels, transformation_matricies = load_config_file("./integration_test_data", "views", background_color)
 
-            pixels = (
-                torch.tensor(
-                    iio.imread(os.path.join("./integration_test_data/", image_src))
-                )
-                .t()
-                .flipud()
-                .float()
-            )
-            color_pixels = (
-                torch.tensor(
-                    iio.imread(
-                        os.path.join("./integration_test_data/", color_image_src)
-                    )
-                )[:, :, :3]
-                .transpose(0, 1)
-                .flip([0])
-                .float()
-                / 255.0
-            )
-            color_pixels /= torch.max(color_pixels)
-            self.assertAlmostEqual(torch.max(color_pixels), 1.0, 3)
+        color_pixels /= torch.max(color_pixels)
+        self.assertAlmostEqual(torch.max(color_pixels), 1.0, 3)
 
+        num_views = color_pixels.shape[0]
+        for view_idx in range(num_views):
+            transformation_matrix = transformation_matricies[view_idx]
+            
             out_dir = "./e2e_output/test_rendering_depth_e2e_with_given_network/"
 
             depth, out_colors = render_image(
@@ -135,15 +111,15 @@ class TestNerfInt(unittest.TestCase):
 
             os.makedirs(out_dir, exist_ok=True)
             imageio.imwrite(
-                out_dir + "output_" + image_src,
+                out_dir + "output_depth" + str(view_idx) + ".png",
                 (out_depth).reshape((size, size)).t().fliplr().numpy(),
             )
             imageio.imwrite(
-                out_dir + "output_diff_" + image_src,
+                out_dir + "output_diff_" + str(view_idx)  + ".png",
                 (l1_depth_error).reshape((size, size)).t().fliplr().numpy(),
             )
             imageio.imwrite(
-                out_dir + "output_colors_" + color_image_src,
+                out_dir + "output_colors_" + str(view_idx) + ".png",
                 (out_colors * 255)
                 .reshape((size, size, 3))
                 .transpose(0, 1)
@@ -151,7 +127,7 @@ class TestNerfInt(unittest.TestCase):
                 .numpy(),
             )
             imageio.imwrite(
-                out_dir + "output_colors_diff" + color_image_src,
+                out_dir + "output_colors_diff" + str(view_idx) + ".png",
                 (torch.abs(color_pixels.flatten() - out_colors.flatten()) * 255)
                 .reshape((size, size, 3))
                 .transpose(0, 1)

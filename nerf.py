@@ -243,7 +243,7 @@ def replace_alpha_with_solid_color(img, background_color):
     foreground_contribution = img_alpha_channel * img[:, :, :3]
     return background_contribution + foreground_contribution
 
-def load_config_file(data_path, type, background_color):
+def load_config_file(data_path, type, background_color, has_depth_data=False):
     """
     Loads a json config file in the style of the original NeRF paper's training data
 
@@ -251,6 +251,7 @@ def load_config_file(data_path, type, background_color):
         data_path: the path to the folder containing the config file
         type: the type of config to load from the file, "train", "val" or "test"
         background_color: Size (3) tensor representing the color to swap out the alpha channel with
+        has_depth_data: are there images files representing the ground truth depth in the data
 
     Returns:
         fov: the field of view in radians
@@ -272,6 +273,7 @@ def load_config_file(data_path, type, background_color):
 
     transformation_matricies = []
     images = []
+    depth_images = []
     fov = None
     if "camera_angle_x" in config:
         fov = torch.tensor(config["camera_angle_x"])
@@ -287,17 +289,30 @@ def load_config_file(data_path, type, background_color):
             .flip([0])
             .float()
         )
-        #pixels /= torch.max(pixels)
-        width, height, channels = pixels.shape
-
-        assert width == height
+        channels = pixels.shape[2]
         assert channels == 3
-
         images.append(pixels)
+
+        if has_depth_data:
+            depth_image_src = f["file_path"] + "_depth" + ".png"
+            depth_pixels = (
+                torch.tensor(iio.imread(os.path.join(data_path, depth_image_src)))
+                .transpose(0, 1)
+                .flip([0])
+                .float()
+            )
+            channels = depth_pixels.shape[2]
+            assert channels == 3
+            depth_images.append(depth_pixels)
+
 
     transformation_matricies = torch.stack(transformation_matricies)
     images = torch.stack(images)
-    return fov, images, transformation_matricies
+
+    if has_depth_data:
+        depth_images = torch.stack(depth_images)
+        return fov, images, transformation_matricies, depth_images
+    return fov, images, transformation_matricies 
 
 
 def generate_rays(fov, camera_rotation_matrix, image_plane_points, aspect_ratio=1):

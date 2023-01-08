@@ -1,6 +1,5 @@
 import torch
 
-
 def generate_rot_x(angle):
     return torch.tensor(
         [
