@@ -15,6 +15,7 @@ class TestNerfUnit(unittest.TestCase):
         batch_size = 10
         for _ in range(1000):
             batched_points = compute_stratified_sample_points(
+                "cpu",
                 batch_size,
                 2,
                 torch.tensor([1]).repeat(batch_size),
@@ -54,14 +55,26 @@ class TestNerfUnit(unittest.TestCase):
                     colors = torch.zeros((num_points, 3))
                     return colors, opacity
 
+            t_near = torch.tensor([0.1]).repeat(batch_size)
+            t_far = torch.tensor([101]).repeat(batch_size)
+            background_color = torch.tensor([0.0, 0.0, 0.0])
+            batched_points = compute_stratified_sample_points(
+                "cpu",
+                batch_size,
+                num_samples + 1,
+                t_near,
+                t_far,
+            )
             _, out_distances, _ = trace_ray(
                 "cpu",
+                num_samples,
+                batched_points,
                 DistanceNetwork(),
                 camera_pos,
                 dirs,
-                num_samples,
-                torch.tensor([0.1]).repeat(batch_size),
-                torch.tensor([101]).repeat(batch_size),
+                t_near,
+                t_far,
+                background_color
             )
             for d in out_distances:
                 self.assertLess(d, solid_distance + 0.5)
@@ -82,15 +95,30 @@ class TestNerfUnit(unittest.TestCase):
                 opacity = torch.zeros((batch_size))
                 colors = torch.zeros((batch_size, 3))
                 return colors, opacity
+        
+        num_samples = 100
+        batch_size = 1
+        t_near = torch.tensor([0.1]).repeat(batch_size)
+        t_far = torch.tensor([101]).repeat(batch_size)
+        background_color = torch.tensor([0.0, 0.0, 0.0])
+        samples_times = compute_stratified_sample_points(
+            "cpu",
+            batch_size,
+            num_samples + 1,
+            t_near,
+            t_far,
+        )
 
         _, distance, _ = trace_ray(
             "cpu",
+            num_samples,
+            samples_times,
             DistanceNetwork(),
             camera_poses,
             dirs,
-            100,
-            torch.tensor([0.1]),
-            torch.tensor([101]),
+            t_near,
+            t_far,
+            background_color,
         )
         self.assertAlmostEqual(distance.clone().detach().numpy()[0], 101, 3)
 
@@ -111,14 +139,30 @@ class TestNerfUnit(unittest.TestCase):
                 colors = torch.zeros((batch_size, 3))
                 return colors, opacity
 
+        num_samples = 100
+        batch_size = 1
+        t_near = torch.tensor([0.1]).repeat(batch_size)
+        t_far = torch.tensor([101]).repeat(batch_size)
+        background_color = torch.tensor([0.0, 0.0, 0.0])
+
+        samples_times = compute_stratified_sample_points(
+            "cpu",
+            batch_size,
+            num_samples + 1,
+            t_near,
+            t_far,
+        )
+
         _, distance, _ = trace_ray(
             "cpu",
+            num_samples,
+            samples_times,
             DistanceNetwork(),
             camera_poses,
             dirs,
-            100,
-            torch.tensor([t_near]),
-            torch.tensor([101]),
+            t_near,
+            t_far,
+            background_color,
         )
         self.assertLess(torch.abs(distance[0] - torch.tensor(t_near)), 1.0)
 
@@ -168,16 +212,19 @@ class TestNerfUnit(unittest.TestCase):
                     colors = torch.zeros((num_points, 3))
                     return colors, opacity
 
+            background_color = torch.tensor([0.0, 0.0, 0.0])
+
             _, out_distances, _ = trace_hierarchical_ray(
                 "cpu",
                 CoarseDistanceNetwork(),
                 FineDistanceNetwork(),
-                camera_pos,
-                dirs,
                 num_coarse_samples,
                 num_fine_samples,
+                camera_pos,
+                dirs,
                 torch.tensor([0.1]).repeat(batch_size),
                 torch.tensor([101]).repeat(batch_size),
+                background_color
             )
             for d in out_distances:
                 self.assertLess(d, solid_distance + 0.5)
@@ -294,7 +341,7 @@ class TestNerfUnit(unittest.TestCase):
                 [0.0, 10, 20, 70, 100],
             ]
         )
-        points = inverse_transform_sampling(stopping_probs, bin_boundaries, 1000)
+        points = inverse_transform_sampling("cpu", stopping_probs, bin_boundaries, 5000)
 
         for i in range(batch_size):
             bin_counts, _ = torch.histogram(points[i], bin_boundaries[i])

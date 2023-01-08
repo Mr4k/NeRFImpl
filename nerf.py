@@ -122,11 +122,11 @@ def trace_hierarchical_ray(
     )
     coarse_color, _, stopping_probs = trace_ray(
         device,
+        num_coarse_sample_points,
         coarse_stratified_sample_times,
         coarse_radiance_field,
         positions,
         directions,
-        num_coarse_sample_points,
         t_near,
         t_far,
         background_color,
@@ -145,11 +145,11 @@ def trace_hierarchical_ray(
 
     fine_color, fine_distance, _ = trace_ray(
         device,
+        num_coarse_sample_points + num_extra_fine_sample_points,
         fine_sample_times,
         fine_radiance_field,
         positions,
         directions,
-        num_coarse_sample_points + num_extra_fine_sample_points,
         t_near,
         t_far,
         background_color,
@@ -159,14 +159,15 @@ def trace_hierarchical_ray(
 
 
 def trace_ray(
-    device, stratified_sample_times, radiance_field, origins, directions, t_near, t_far, background_color
+    device, num_samples, stratified_sample_times, radiance_field, origins, directions, t_near, t_far, background_color
 ):
     """
     Traces a ray through a radiance field
 
     Args:
         device: https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
-        stratified_sample_times: Size (batch_size, num_samples) tensor representing the ordered times to sample along each ray
+        num_samples: the number of samples
+        stratified_sample_times: Size (batch_size, num_samples + 1) tensor representing the ordered times to sample along each ray
         positions: Size (batch_size, 3) tensor representing the ray origins in 3d space
         directions: Size (batch_size, 3) tensor representing the normalized ray directions in 3d space
         t_near: Size (batch_size) tensor representing the time along the ray representing the near plane
@@ -178,15 +179,14 @@ def trace_ray(
         expected_distance: Size (batch_size) tensor representing the expected distance to collision along each ray
         stopping_probs: Size (batch_size, num_samples) tensor representing the probabiltiy of the ray terminating in each bin
     """
-    num_samples = stratified_sample_times.shape[1]
-    batch_size = origins.shape[0]
+    batch_size = stratified_sample_times.shape[0]
 
-    stratified_sample_points_centered_at_the_origin = stratified_sample_times.view(
+    stratified_sample_points_centered_at_the_origin = stratified_sample_times.reshape(
         batch_size, num_samples + 1, 1
     ).repeat(1, 1, 3) * directions.view(batch_size, 1, -1).repeat(1, num_samples + 1, 1)
     stratified_sample_points = (
         stratified_sample_points_centered_at_the_origin
-        + origins.view(batch_size, 1, -1).repeat(1, num_samples + 1, 1)
+        + origins.reshape(batch_size, 1, -1).repeat(1, num_samples + 1, 1)
     )
 
     colors, opacity = radiance_field_output(
