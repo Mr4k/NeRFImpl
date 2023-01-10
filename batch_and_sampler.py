@@ -7,7 +7,7 @@ from nerf import get_camera_position, generate_rays, trace_hierarchical_ray
 
 
 def render_image(
-    size, transformation_matrix, fov, near, far, coarse_network, fine_network, device, background_color
+    size, transformation_matrix, fov, near, far, coarse_network, fine_network, coarse_samples, fine_samples, add_coarse_sample_to_fine_samples, device, background_color
 ):
     total_rays = size * size
     batch_size = 4096
@@ -49,6 +49,9 @@ def render_image(
             far,
             coarse_network,
             fine_network,
+            coarse_samples,
+            fine_samples,
+            add_coarse_sample_to_fine_samples,
             device,
             background_color,
         )
@@ -72,6 +75,9 @@ def render_rays(
     far,
     coarse_network,
     fine_network,
+    coarse_samples,
+    fine_samples,
+    add_coarse_samples_to_fine_samples,
     device,
     background_color,
 ):
@@ -81,8 +87,9 @@ def render_rays(
         device,
         coarse_network,
         fine_network,
-        64,
-        128,
+        coarse_samples,
+        fine_samples,
+        add_coarse_samples_to_fine_samples,
         camera_poses,
         rays,
         nears,

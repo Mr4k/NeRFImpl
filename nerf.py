@@ -78,7 +78,8 @@ def trace_hierarchical_ray(
     coarse_radiance_field,
     fine_radiance_field,
     num_coarse_sample_points,
-    num_extra_fine_sample_points,
+    num_fine_sample_points,
+    add_coarse_sample_to_fine_samples,
     positions,
     directions,
     t_near,
@@ -133,19 +134,25 @@ def trace_hierarchical_ray(
     )
 
     inverse_transform_sample_times = inverse_transform_sampling(
-        device, stopping_probs, coarse_stratified_sample_times, num_extra_fine_sample_points
+        device, stopping_probs, coarse_stratified_sample_times, num_fine_sample_points
     )
 
-    fine_sample_times, _ = torch.sort(
-        torch.concat(
+    unsorted_fine_sample_times = inverse_transform_sample_times
+    num_final_fine_sample_points = num_fine_sample_points
+    if add_coarse_sample_to_fine_samples:
+        unsorted_fine_sample_times = torch.concat(
             [coarse_stratified_sample_times, inverse_transform_sample_times], dim=1
-        ),
+        )
+        num_final_fine_sample_points = num_coarse_sample_points + num_fine_sample_points
+    
+    fine_sample_times, _ = torch.sort(
+        unsorted_fine_sample_times,
         dim=1,
     )
 
     fine_color, fine_distance, _ = trace_ray(
         device,
-        num_coarse_sample_points + num_extra_fine_sample_points,
+        num_final_fine_sample_points,
         fine_sample_times,
         fine_radiance_field,
         positions,
@@ -301,8 +308,6 @@ def load_config_file(data_path, type, background_color, has_depth_data=False):
                 .flip([0])
                 .float()
             )
-            channels = depth_pixels.shape[2]
-            assert channels == 3
             depth_images.append(depth_pixels)
 
 

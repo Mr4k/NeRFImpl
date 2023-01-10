@@ -1,2 +1,2 @@
-torch==1.13.0+cu116
+torch>=1.13.0
 imageio==2.19.3

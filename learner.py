@@ -39,10 +39,12 @@ def train(args):
 
     # (batch size, 3)
     scale = 5.0
-    batch_size = 3500
+    batch_size = args.batch_size
 
     train_fov, train_images, train_transformation_matricies = load_config_file(os.path.join(args.data_path), "train", background_color)
     _, _, val_transformation_matricies = load_config_file(os.path.join(args.data_path), "val", background_color)
+
+    train_size = train_images.shape[1]
 
     near = 0.5
     far = 7
@@ -52,16 +54,16 @@ def train(args):
     fine_model = NerfModel(scale, device).to(device)
 
     optimizer = torch.optim.Adam(
-        chain(coarse_model.parameters(), fine_model.parameters()), lr=0.0005
+        chain(coarse_model.parameters(), fine_model.parameters()), lr=args.learning_rate
     )
 
-    num_steps = 100000
+    num_steps = args.num_steps
     loss_at_last_snapshot = -1
     last_snapshot_iter = -1
     for step in range(num_steps):
         camera_poses, rays, distance_to_depth_modifiers, expected_colors = sample_batch(
             batch_size,
-            200,
+            train_size,
             train_transformation_matricies,
             train_images,
             train_fov,
@@ -78,6 +80,9 @@ def train(args):
             far,
             coarse_model,
             fine_model,
+            args.coarse_samples,
+            args.fine_samples,
+            args.add_course_samples_to_fine_samples,
             device,
             background_color,
         )
@@ -107,7 +112,7 @@ def train(args):
                 print(
                     f"rendering snapshot from view {i} at step {step} with loss {loss}"
                 )
-                size = 200
+                size = args.output_image_size
 
                 with torch.no_grad():
                     depth_image, color_image, coarse_color_image = render_image(
@@ -118,6 +123,9 @@ def train(args):
                         far,
                         coarse_model,
                         fine_model,
+                        args.coarse_samples,
+                        args.fine_samples,
+                        args.add_course_samples_to_fine_samples,
                         device,
                         background_color
                     )
@@ -186,6 +194,48 @@ if __name__ == "__main__":
         type=int,
         help="the number of validation views to render on snapshot",
         default=5,
+    )
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        help="the batch size when training",
+        default=3500,
+    )
+    parser.add_argument(
+        "--learning_rate",
+        type=float,
+        help="the learning rate of the Adam optimizer",
+        default=0.0005,
+    )
+    parser.add_argument(
+        "--num_steps",
+        type=float,
+        help="the numbers of training steps to take",
+        default=3000,
+    )
+    parser.add_argument(
+        "--output_image_size",
+        type=int,
+        help="the image size to render",
+        default=200,
+    )
+    parser.add_argument(
+        "--coarse_samples",
+        type=int,
+        help="the number of coarse samples",
+        default=64,
+    )
+    parser.add_argument(
+        "--fine_samples",
+        type=int,
+        help="the number of fine samples to take from the inverse transform sampling",
+        default=128,
+    )
+    parser.add_argument(
+        "--add_course_samples_to_fine_samples",
+        type=bool,
+        help="the original paper adds the number of coarse samples to the fine samples. I turn this off to generate the images comparing the sampling schemes.",
+        default=True,
     )
     args = parser.parse_args()
     train(args)

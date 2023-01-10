@@ -1,7 +1,7 @@
 import unittest
 import torch
 
-from neural_nerf import NerfModel, embed_tensor
+from neural_nerf import NerfModel
 
 
 class TestNeuralNerfUnit(unittest.TestCase):
@@ -101,7 +101,8 @@ class TestNeuralNerfUnit(unittest.TestCase):
             ]
         )
 
-        result = embed_tensor(p, 4, "cpu")
+        model = NerfModel(5.0, "cpu")
+        result = model.embed_tensor(p, 4)
         self.assertEqual(result.shape, torch.Size([2, 24]))
         self.assertLess((result - expected).abs().sum(), epsilon)
 

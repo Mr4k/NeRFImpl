@@ -220,6 +220,7 @@ class TestNerfUnit(unittest.TestCase):
                 FineDistanceNetwork(),
                 num_coarse_samples,
                 num_fine_samples,
+                True,
                 camera_pos,
                 dirs,
                 torch.tensor([0.1]).repeat(batch_size),
