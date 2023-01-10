@@ -275,7 +275,7 @@ def load_config_file(data_path, type, background_color, has_depth_data=False):
 
     if "camera_angle_x" not in config:
         raise Exception(
-            f"keyword 'amera_angle_x' not found in config file at path: {data_path}"
+            f"keyword 'camera_angle_x' not found in config file at path: {data_path}"
         )
 
     transformation_matricies = []

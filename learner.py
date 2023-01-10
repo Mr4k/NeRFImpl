@@ -35,7 +35,7 @@ def train(args):
     print(f"creating output dir: {out_dir}")
     os.makedirs(out_dir)
 
-    background_color = torch.tensor([1.0, 1.0, 1.0])
+    background_color = torch.tensor(args.background_color)
 
     # (batch size, 3)
     scale = 5.0
@@ -237,5 +237,16 @@ if __name__ == "__main__":
         help="the original paper adds the number of coarse samples to the fine samples. I turn this off to generate the images comparing the sampling schemes.",
         default=True,
     )
+    parser.add_argument(
+        "--background_color",
+        type=str,
+        help="a comma seperated list of integers in [0, 255] representing the background color",
+        default="0,0,0",
+    )
     args = parser.parse_args()
+    colors = args.background_color.split(",")
+    if len(colors) != 3:
+        raise Exception("expected 3 colors for --background_color")
+    colors = [float(int(c)) / 255.0 for c in colors]
+    args.background_color = colors
     train(args)
