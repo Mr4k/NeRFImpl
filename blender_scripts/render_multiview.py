@@ -38,16 +38,16 @@ render_height = 200
 bpy.context.scene.use_nodes = True
 tree = bpy.context.scene.node_tree
 links = tree.links
-  
+
 # clear default nodes
 for n in tree.nodes:
     tree.nodes.remove(n)
-  
+
 # create input render layer node
-rl = tree.nodes.new('CompositorNodeRLayers')
- 
+rl = tree.nodes.new("CompositorNodeRLayers")
+
 # create output node
-v = tree.nodes.new('CompositorNodeViewer')   
+v = tree.nodes.new("CompositorNodeViewer")
 v.use_alpha = False
 
 min_depth = 0.5
@@ -60,10 +60,10 @@ links.new(rl.outputs[2], v.inputs[0])  # link Depth output to Viewer input
 for i in range(num_cameras):
     # Create a new camera object
     camera = bpy.data.cameras.new("Camera")
-    
+
     # Set the FOV and aspect ratio of the camera
     camera.angle = camera_fov
-    
+
     camera.clip_start = 0.1
     camera.clip_end = 10
 
@@ -81,20 +81,22 @@ for i in range(num_cameras):
     # Point the camera at the center position
     direction = camera_object.location - center_position
 
-    rot = direction.to_track_quat('Z', 'Y').to_matrix().to_4x4()
+    rot = direction.to_track_quat("Z", "Y").to_matrix().to_4x4()
     loc = mathutils.Matrix.Translation(camera_object.location)
 
-    camera_object.matrix_world =  loc @ rot
+    camera_object.matrix_world = loc @ rot
 
     # Add the camera to the scene
-    scene.collection.objects.link(camera_object) 
-    
+    scene.collection.objects.link(camera_object)
+
     # Save the camera's world matrix and FOV to the dictionary
-    camera_data.append({
-        "transformation_matrix": [list(row) for row in camera_object.matrix_world],
-        "fov": camera.angle,
-        "file_path": "Camera_{}.png".format(camera_object.name)
-    })
+    camera_data.append(
+        {
+            "transformation_matrix": [list(row) for row in camera_object.matrix_world],
+            "fov": camera.angle,
+            "file_path": "Camera_{}.png".format(camera_object.name),
+        }
+    )
 
 # Set the active camera in the scene
 scene.camera = camera_object
@@ -114,36 +116,41 @@ for camera_object in scene.objects:
         scene.camera = camera_object
 
         # Set the output path for the current camera
-        scene.render.filepath = os.path.join(output_dir, "Camera_{}.png".format(camera_object.name))
+        scene.render.filepath = os.path.join(
+            output_dir, "Camera_{}.png".format(camera_object.name)
+        )
 
         # Render the scene from the current camera
         bpy.ops.render.render(write_still=True)
-        
-        pixels = bpy.data.images['Viewer Node'].pixels
-         
+
+        pixels = bpy.data.images["Viewer Node"].pixels
+
         # copy buffer to numpy array for faster manipulation
         arr = np.array(pixels[:])
-        arr = arr.reshape((render_width, render_height, -1))[:,:,0]
-        print(arr, np.min(arr), np.max(arr))
+        arr = arr.reshape((render_width, render_height, -1))[:, :, 0]
         arr[arr > max_depth] = max_depth
         arr[arr < min_depth] = min_depth
         arr -= min_depth
         arr /= max_depth - min_depth
         arr = (1.0 - arr) * 255
-        arr = np.flip(arr, axis = 0)
-        print(np.max(arr), np.min(arr))
+        arr = np.flip(arr, axis=0)
         assert np.max(arr) <= 255
         assert np.min(arr) >= 0
-        print(arr.shape)
-        
-        cv2.imwrite(os.path.join(output_dir, "Camera_{}_depth.png".format(camera_object.name)), arr)
-        print("saved:", os.path.join(output_dir, "Camera_{}_depth.png".format(camera_object.name)))
+
+        cv2.imwrite(
+            os.path.join(output_dir, "Camera_{}_depth.png".format(camera_object.name)),
+            arr,
+        )
+        print(
+            "saved:",
+            os.path.join(output_dir, "Camera_{}_depth.png".format(camera_object.name)),
+        )
 
 
 # Remove the cameras from the scene
 for camera_object in scene.objects:
     if camera_object.type == "CAMERA":
         scene.collection.objects.unlink(camera_object)
-        
+
         # Delete the camera from memory
         bpy.data.cameras.remove(camera_object.data)

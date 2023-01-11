@@ -7,3 +7,9 @@ __pycache__
 outputs/
 
 wandb/
+
+e2e_output/
+
+training_output/
+
+.zip
