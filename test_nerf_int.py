@@ -101,7 +101,7 @@ class TestNerfInt(unittest.TestCase):
             out_dir = "./e2e_output/test_rendering_depth_e2e_with_given_network/"
 
             depth, colors, _ = render_image(
-                size, transformation_matrix, fov, near, far, CubeNetwork(), CubeNetwork(), "cpu", background_color
+                size, transformation_matrix, fov, near, far, CubeNetwork(), CubeNetwork(), 64, 128, True, "cpu", background_color
             )
             normalized_depth = (depth - near) / (far - near)
             inverted_normalized_depth = 1 - normalized_depth
