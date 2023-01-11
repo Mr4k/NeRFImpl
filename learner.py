@@ -32,7 +32,6 @@ def train(args):
 
     background_color = torch.tensor(args.background_color)
 
-    # (batch size, 3)
     scale = 5.0
     batch_size = args.batch_size
 

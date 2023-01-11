@@ -1,10 +1,5 @@
 import torch
 
-"""
-points: tensor dim = (num points, space_dim)
-"""
-
-
 class NerfModel(torch.nn.Module):
     def __init__(self, scale, device):
         super(NerfModel, self).__init__()
