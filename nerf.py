@@ -216,21 +216,19 @@ def trace_ray(
 
     # TODO (getting rid of this for loop likely speeds up rendering)
     # on second thought maybe not, bottleneck will eventually likely be get_network_output
-    stopping_probs = []
     for i in range(num_samples):
         delta = stratified_sample_times[:, i + 1] - stratified_sample_times[:, i]
         prob_hit_current_bin = 1 - torch.exp(-opacity[:, i] * delta)
         cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
 
-        next_stopping_probs = cum_passthrough_prob * prob_hit_current_bin
+        stopping_probs[:, i] = cum_passthrough_prob * prob_hit_current_bin
 
-        cum_color = cum_color + next_stopping_probs.reshape(-1, 1).repeat(1, 3) * colors[:, i]
+        cum_color = cum_color + stopping_probs[:, i].reshape(-1, 1).repeat(1, 3) * colors[:, i]
 
-        cum_expected_distance = cum_expected_distance + next_stopping_probs * distance_acc
+        cum_expected_distance = cum_expected_distance + stopping_probs[:, i] * distance_acc
 
         cum_partial_passthrough_sum = cum_partial_passthrough_sum + opacity[:, i] * delta
         distance_acc = distance_acc + delta
-        stopping_probs.append(next_stopping_probs)
 
     # add far plane
     cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
@@ -242,7 +240,7 @@ def trace_ray(
         torch.min(
             torch.max(cum_expected_distance, t_near), t_far
         ),
-        torch.stack(stopping_probs, 1),
+        stopping_probs,
     )
 
 def replace_alpha_with_solid_color(img, background_color):
