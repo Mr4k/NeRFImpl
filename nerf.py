@@ -224,18 +224,18 @@ def trace_ray(
 
         next_stopping_probs = cum_passthrough_prob * prob_hit_current_bin
 
-        cum_color += next_stopping_probs.reshape(-1, 1).repeat(1, 3) * colors[:, i]
+        cum_color = cum_color + next_stopping_probs.reshape(-1, 1).repeat(1, 3) * colors[:, i]
 
-        cum_expected_distance += next_stopping_probs * distance_acc
+        cum_expected_distance = cum_expected_distance + next_stopping_probs * distance_acc
 
-        cum_partial_passthrough_sum += opacity[:, i] * delta
-        distance_acc += delta
+        cum_partial_passthrough_sum = cum_partial_passthrough_sum + opacity[:, i] * delta
+        distance_acc = distance_acc + delta
         stopping_probs.append(next_stopping_probs)
 
     # add far plane
     cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
-    cum_expected_distance += cum_passthrough_prob * t_far
-    cum_color += cum_passthrough_prob.reshape(-1, 1).matmul(background_color.reshape(1, 3))
+    cum_expected_distance = cum_expected_distance + cum_passthrough_prob * t_far
+    cum_color = cum_color + cum_passthrough_prob.reshape(-1, 1).matmul(background_color.reshape(1, 3))
 
     return (
         cum_color,
