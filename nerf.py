@@ -186,62 +186,63 @@ def trace_ray(
         expected_distance: Size (batch_size) tensor representing the expected distance to collision along each ray
         stopping_probs: Size (batch_size, num_samples) tensor representing the probabiltiy of the ray terminating in each bin
     """
-    batch_size = stratified_sample_times.shape[0]
+    with torch.autograd.set_detect_anomaly(True):
+        batch_size = stratified_sample_times.shape[0]
 
-    stratified_sample_points_centered_at_the_origin = stratified_sample_times.reshape(
-        batch_size, num_samples + 1, 1
-    ).repeat(1, 1, 3) * directions.view(batch_size, 1, -1).repeat(1, num_samples + 1, 1)
-    stratified_sample_points = (
-        stratified_sample_points_centered_at_the_origin
-        + origins.reshape(batch_size, 1, -1).repeat(1, num_samples + 1, 1)
-    )
+        stratified_sample_points_centered_at_the_origin = stratified_sample_times.reshape(
+            batch_size, num_samples + 1, 1
+        ).repeat(1, 1, 3) * directions.view(batch_size, 1, -1).repeat(1, num_samples + 1, 1)
+        stratified_sample_points = (
+            stratified_sample_points_centered_at_the_origin
+            + origins.reshape(batch_size, 1, -1).repeat(1, num_samples + 1, 1)
+        )
 
-    colors, opacity = radiance_field_output(
-        radiance_field,
-        stratified_sample_points.view(-1, 3),
-        directions.repeat_interleave(num_samples + 1, dim=0),
-    )
-    colors = colors.view(batch_size, num_samples + 1, 3)
-    opacity = opacity.view(batch_size, num_samples + 1)
+        colors, opacity = radiance_field_output(
+            radiance_field,
+            stratified_sample_points.view(-1, 3),
+            directions.repeat_interleave(num_samples + 1, dim=0),
+        )
+        colors = colors.view(batch_size, num_samples + 1, 3)
+        opacity = opacity.view(batch_size, num_samples + 1)
 
-    cum_partial_passthrough_sum = torch.zeros(batch_size, device=device)
+        cum_partial_passthrough_sum = torch.zeros(batch_size, device=device)
 
-    # a tensor that gives the probablity of the ray terminating in the nth bin
-    # note this is really only need for the course network
-    # might want to refactor the code so it can be disabled for the fine network
-    stopping_probs = torch.zeros((batch_size, num_samples), device=device)
-    cum_color = torch.zeros((batch_size, 3), device=device)
-    cum_expected_distance = torch.zeros(batch_size, device=device)
-    distance_acc = torch.ones(batch_size, device=device) * t_near
+        # a tensor that gives the probablity of the ray terminating in the nth bin
+        # note this is really only need for the course network
+        # might want to refactor the code so it can be disabled for the fine network
+        stopping_probs = torch.zeros((batch_size, num_samples), device=device)
+        cum_color = torch.zeros((batch_size, 3), device=device)
+        cum_expected_distance = torch.zeros(batch_size, device=device)
+        distance_acc = torch.ones(batch_size, device=device) * t_near
 
-    # TODO (getting rid of this for loop likely speeds up rendering)
-    # on second thought maybe not, bottleneck will eventually likely be get_network_output
-    for i in range(num_samples):
-        delta = stratified_sample_times[:, i + 1] - stratified_sample_times[:, i]
-        prob_hit_current_bin = 1 - torch.exp(-opacity[:, i] * delta)
+        # TODO (getting rid of this for loop likely speeds up rendering)
+        # on second thought maybe not, bottleneck will eventually likely be get_network_output
+        for i in range(num_samples):
+            delta = stratified_sample_times[:, i + 1] - stratified_sample_times[:, i]
+            prob_hit_current_bin = 1 - torch.exp(-opacity[:, i] * delta)
+            cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
+
+            stopping_probs[:, i] = cum_passthrough_prob * prob_hit_current_bin
+
+            cum_color += stopping_probs[:, i].reshape(-1, 1).repeat(1, 3) * colors[:, i]
+
+            cum_expected_distance += stopping_probs[:, i] * distance_acc
+
+            cum_partial_passthrough_sum += opacity[:, i] * delta
+            distance_acc += delta
+
+        # add far plane
         cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
+        cum_expected_distance += cum_passthrough_prob * t_far
+        cum_color += cum_passthrough_prob.reshape(-1, 1).matmul(background_color.view(1, 3))
 
-        stopping_probs[:, i] = cum_passthrough_prob * prob_hit_current_bin
-
-        cum_color += stopping_probs[:, i].reshape(-1, 1).repeat(1, 3) * colors[:, i]
-
-        cum_expected_distance += stopping_probs[:, i] * distance_acc
-
-        cum_partial_passthrough_sum += opacity[:, i] * delta
-        distance_acc += delta
-
-    # add far plane
-    cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
-    cum_expected_distance += cum_passthrough_prob * t_far
-    cum_color += cum_passthrough_prob.reshape(-1, 1).matmul(background_color.view(1, 3))
-
-    return (
-        cum_color,
-        torch.min(
-            torch.max(cum_expected_distance, t_near), t_far
-        ),
-        stopping_probs,
-    )
+        return (
+            cum_color,
+            torch.min(
+                torch.max(cum_expected_distance, t_near), t_far
+            ),
+            stopping_probs,
+        )
 
 def replace_alpha_with_solid_color(img, background_color):
     img = img / 255.0
