@@ -190,7 +190,7 @@ def trace_ray(
 
     stratified_sample_points_centered_at_the_origin = stratified_sample_times.reshape(
         batch_size, num_samples + 1, 1
-    ).repeat(1, 1, 3) * directions.view(batch_size, 1, -1).repeat(1, num_samples + 1, 1)
+    ).repeat(1, 1, 3) * directions.reshape(batch_size, 1, -1).repeat(1, num_samples + 1, 1)
     stratified_sample_points = (
         stratified_sample_points_centered_at_the_origin
         + origins.reshape(batch_size, 1, -1).repeat(1, num_samples + 1, 1)
@@ -198,11 +198,11 @@ def trace_ray(
 
     colors, opacity = radiance_field_output(
         radiance_field,
-        stratified_sample_points.view(-1, 3),
+        stratified_sample_points.reshape(-1, 3),
         directions.repeat_interleave(num_samples + 1, dim=0),
     )
-    colors = colors.view(batch_size, num_samples + 1, 3)
-    opacity = opacity.view(batch_size, num_samples + 1)
+    colors = colors.reshape(batch_size, num_samples + 1, 3)
+    opacity = opacity.reshape(batch_size, num_samples + 1)
 
     cum_partial_passthrough_sum = torch.zeros(batch_size, device=device)
 
@@ -233,7 +233,7 @@ def trace_ray(
     # add far plane
     cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
     cum_expected_distance += cum_passthrough_prob * t_far
-    cum_color += cum_passthrough_prob.reshape(-1, 1).matmul(background_color.view(1, 3))
+    cum_color += cum_passthrough_prob.reshape(-1, 1).matmul(background_color.shape(1, 3))
 
     return (
         cum_color,
