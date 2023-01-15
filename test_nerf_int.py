@@ -312,21 +312,22 @@ class TestNerfInt(unittest.TestCase):
         print("cuda acceleration available. Using cuda")
 
         for _ in range(100):
-            _, _, _ = render_rays(
-                batch_size,
-                camera_poses,
-                rays,
-                distance_to_depth_modifiers,
-                near,
-                far,
-                coarse_network,
-                fine_network,
-                64,
-                128,
-                True,
-                device,
-                background_color,
-            )
+            with torch.autograd.set_detect_anomaly(True):
+                _, _, _ = render_rays(
+                    batch_size,
+                    camera_poses,
+                    rays,
+                    distance_to_depth_modifiers,
+                    near,
+                    far,
+                    coarse_network,
+                    fine_network,
+                    64,
+                    128,
+                    True,
+                    device,
+                    background_color,
+                )
 
         with profile(
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
