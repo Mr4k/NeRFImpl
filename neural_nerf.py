@@ -40,7 +40,7 @@ class NerfModel(torch.nn.Module):
     def embed_tensor(self, points, l):
         embeddings = points.repeat(1, l)
         scalars = torch.pow(
-                2.0, torch.arange(0, l, 1, device=self.device)
+                2.0, torch.arange(0.0, float(l), 1.0, device=self.device)
             ).repeat_interleave(3)
 
         # TODO unknown if this different ordering will be a problem with learning
