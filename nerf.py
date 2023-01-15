@@ -29,7 +29,7 @@ def inverse_transform_sampling(device, stopping_probs, bin_boundary_points, num_
         )
         * torch.rand((batch_size * num_samples), device=device)
         + bin_boundary_points[indexes, flatten_samples]
-    ).view(batch_size, -1)
+    ).reshape(batch_size, -1)
 
 
 def compute_stratified_sample_points(device, batch_size, num_samples, t_near, t_far):
@@ -216,19 +216,21 @@ def trace_ray(
 
     # TODO (getting rid of this for loop likely speeds up rendering)
     # on second thought maybe not, bottleneck will eventually likely be get_network_output
+    stopping_probs = []
     for i in range(num_samples):
         delta = stratified_sample_times[:, i + 1] - stratified_sample_times[:, i]
         prob_hit_current_bin = 1 - torch.exp(-opacity[:, i] * delta)
         cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
 
-        stopping_probs[:, i] = cum_passthrough_prob * prob_hit_current_bin
+        next_stopping_probs = cum_passthrough_prob * prob_hit_current_bin
 
-        cum_color += stopping_probs[:, i].reshape(-1, 1).repeat(1, 3) * colors[:, i]
+        cum_color += next_stopping_probs.reshape(-1, 1).repeat(1, 3) * colors[:, i]
 
-        cum_expected_distance += stopping_probs[:, i] * distance_acc
+        cum_expected_distance += next_stopping_probs * distance_acc
 
         cum_partial_passthrough_sum += opacity[:, i] * delta
         distance_acc += delta
+        stopping_probs.append(next_stopping_probs)
 
     # add far plane
     cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
@@ -240,13 +242,13 @@ def trace_ray(
         torch.min(
             torch.max(cum_expected_distance, t_near), t_far
         ),
-        stopping_probs,
+        torch.concat(stopping_probs, 1),
     )
 
 def replace_alpha_with_solid_color(img, background_color):
     img = img / 255.0
     img_alpha_channel = img[:, :, 3][:, :, None]
-    background_contribution = torch.matmul(1.0 - img_alpha_channel, background_color.view(1, -1))
+    background_contribution = torch.matmul(1.0 - img_alpha_channel, background_color.reshape(1, -1))
     foreground_contribution = img_alpha_channel * img[:, :, :3]
     return background_contribution + foreground_contribution
 
@@ -339,7 +341,7 @@ def generate_rays(fov, camera_rotation_matrix, image_plane_points, aspect_ratio=
     z = torch.tensor([1.0]).repeat(batch_size)
     ray = torch.stack([x, y, z], dim=-1)
     ray = torch.mm(ray, camera_rotation_matrix)
-    ray /= ray.norm(dim=1).view(-1, 1).repeat(1, 3)
+    ray /= ray.norm(dim=1).reshape(-1, 1).repeat(1, 3)
     return -ray
 
 
