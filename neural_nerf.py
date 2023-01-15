@@ -39,14 +39,17 @@ class NerfModel(torch.nn.Module):
 
     def embed_tensor(self, points, l):
         embeddings = points.repeat(1, l)
+        scalars = torch.pow(
+                2, torch.arange(0, l, 1, device=self.device)
+            ).repeat_interleave(3)
 
         # TODO unknown if this different ordering will be a problem with learning
-        sin_embeddings = torch.sin(embeddings * self.scalers[l][None, :] * torch.pi)
-        cos_embeddings = torch.cos(embeddings * self.scalers[l][None, :] * torch.pi)
+        sin_embeddings = torch.sin(embeddings * scalars[None, :] * torch.pi)
+        cos_embeddings = torch.cos(embeddings * scalars[None, :] * torch.pi)
         return torch.concat([sin_embeddings, cos_embeddings], dim=1)
 
     def forward(self, pos_input, dir_input):
-        """pos_embedding = self.embed_tensor(pos_input / self.scale, self.l_pos)
+        pos_embedding = self.embed_tensor(pos_input / self.scale, self.l_pos)
 
         x = self.linear1(pos_embedding)
         x = self.relu_activation(x)
@@ -69,9 +72,5 @@ class NerfModel(torch.nn.Module):
         dir_input = self.embed_tensor(dir_input, self.l_dir)
         x = self.linear10(torch.concat([x[:, 1:], dir_input], dim=1))
         x = self.linear11(x)
-        color = self.sigmoid_activation(x)"""
-        batch_size = pos_input.shape[0]
-        print(pos_input.shape)
-        color = torch.zeros((batch_size, 3), device=self.device)
-        density = torch.zeros((batch_size), device=self.device)
+        color = self.sigmoid_activation(x)
         return color, density

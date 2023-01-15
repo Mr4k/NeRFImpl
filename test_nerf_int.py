@@ -241,8 +241,8 @@ class TestNerfInt(unittest.TestCase):
         background_color = torch.tensor([0.0, 0.0, 0.0])
 
         fov, color_images, transformation_matricies = load_config_file("./integration_test_data", "views", background_color, False)
-        coarse_network = torch.compile(NerfModel(5.0, device))
-        fine_network = torch.compile(NerfModel(5.0, device))
+        coarse_network = NerfModel(5.0, device)
+        fine_network = NerfModel(5.0, device)
 
         camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
             batch_size,
