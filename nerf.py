@@ -164,6 +164,7 @@ def trace_hierarchical_ray(
 
     return fine_color.cpu(), fine_distance.cpu(), coarse_color.cpu()
 
+@torch.compile
 def trace_ray(
     device, num_samples, stratified_sample_times, radiance_field, origins, directions, t_near, t_far, background_color
 ):
@@ -237,7 +238,7 @@ def trace_ray(
     return (
         cum_color,
         torch.min(
-            torch.max(cum_expected_distance, torch.tensor(t_near)), torch.tensor(t_far)
+            torch.max(cum_expected_distance, t_near), t_far
         ),
         stopping_probs,
     )
