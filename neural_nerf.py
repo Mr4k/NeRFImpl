@@ -73,5 +73,5 @@ class NerfModel(torch.nn.Module):
         batch_size = pos_input.shape[0]
         print(pos_input.shape)
         color = torch.zeros((batch_size, 3), device=self.device)
-        density = torch.zeros((batch_size, 1), device=self.device)
+        density = torch.zeros((batch_size), device=self.device)
         return color, density
