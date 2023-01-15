@@ -163,7 +163,7 @@ def trace_hierarchical_ray(
     )
 
     return fine_color.cpu(), fine_distance.cpu(), coarse_color.cpu()
-    
+
 def trace_ray(
     device, num_samples, stratified_sample_times, radiance_field, origins, directions, t_near, t_far, background_color
 ):
@@ -232,7 +232,7 @@ def trace_ray(
     # add far plane
     cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
     cum_expected_distance += cum_passthrough_prob * t_far
-    cum_color += cum_passthrough_prob.reshape(-1, 1).matmul(background_color.shape(1, 3))
+    cum_color += cum_passthrough_prob.reshape(-1, 1).matmul(background_color.reshape(1, 3))
 
     return (
         cum_color,
