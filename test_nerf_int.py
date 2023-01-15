@@ -1,5 +1,6 @@
 import unittest
 import torch
+import torch.utils.benchmark as benchmark
 
 import imageio.v3 as iio
 import imageio
@@ -230,6 +231,46 @@ class TestNerfInt(unittest.TestCase):
         self.assertEqual(depth.shape, torch.Size([4096]))
         self.assertEqual(colors.shape, torch.Size([4096, 3]))
 
+    def test_benchmark_neural_nerf_render_e2e(self):
+        use_cuda = torch.cuda.is_available()
+        device = torch.device("cuda" if use_cuda else "cpu")
+        batch_size = 4096
+        near = 0.5
+        far = 7
+
+        background_color = torch.tensor([0.0, 0.0, 0.0])
+
+        fov, color_images, transformation_matricies = load_config_file("./integration_test_data", "views", background_color, False)
+        coarse_network = NerfModel(5.0, device).to(device)
+        fine_network = NerfModel(5.0, device).to(device)
+
+        camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
+            batch_size,
+            200,
+            transformation_matricies,
+            color_images,
+            fov,
+        )
+
+        t0 = benchmark.Timer(
+            stmt='render_rays(batch_size, camera_poses, rays, distance_to_depth_modifiers, near, far, coarse_network, fine_network, 64, 128, True, device, background_color)',
+            setup='from batch_and_sampler import render_rays',
+            globals={
+                'batch_size': batch_size,
+                'camera_poses': camera_poses,
+                'rays': rays,
+                'distance_to_depth_modifiers': distance_to_depth_modifiers,
+                'near': near,
+                'far': far,
+                'coarse_network': coarse_network,
+                'fine_network': fine_network,
+                'device': device, 
+                'background_color': background_color
+            }
+        )
+        print(t0.timeit(10))
+            
+
     def test_profile_gpu_neural_nerf_render_e2e(self):
         use_cuda = torch.cuda.is_available()
         device = torch.device("cuda" if use_cuda else "cpu")
@@ -248,6 +289,14 @@ class TestNerfInt(unittest.TestCase):
         coarse_network = NerfModel(5.0, device).to(device)
         fine_network = NerfModel(5.0, device).to(device)
 
+        camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
+            batch_size,
+            200,
+            transformation_matricies,
+            color_images,
+            fov,
+        )
+
         def trace_handler(prof):
             print(
                 prof.key_averages(group_by_stack_n=5).table(
@@ -256,14 +305,6 @@ class TestNerfInt(unittest.TestCase):
             )
 
         print("cuda acceleration available. Using cuda")
-
-        camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
-            batch_size,
-            200,
-            transformation_matricies,
-            color_images,
-            fov,
-        )
 
         _, _, _ = render_rays(
             batch_size,
@@ -284,16 +325,12 @@ class TestNerfInt(unittest.TestCase):
         with profile(
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
             with_stack=True,
+            with_flops=True,
+            profile_memory=True,
+            record_shapes=True,
             on_trace_ready=trace_handler,
         ) as prof:
             with record_function("train_loop"):
-                camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
-                    batch_size,
-                    200,
-                    transformation_matricies,
-                    color_images,
-                    fov,
-                )
                 depth, colors, _ = render_rays(
                     batch_size,
                     camera_poses,
