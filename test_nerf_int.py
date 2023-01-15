@@ -268,7 +268,7 @@ class TestNerfInt(unittest.TestCase):
                 'background_color': background_color
             }
         )
-        print(t0.timeit(10))
+        print(t0.timeit(20))
             
 
     def test_profile_gpu_neural_nerf_render_e2e(self):
