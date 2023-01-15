@@ -300,7 +300,7 @@ class TestNerfInt(unittest.TestCase):
         def trace_handler(prof):
             print(
                 prof.key_averages(group_by_stack_n=5).table(
-                    sort_by="cpu_time_total", row_limit=5
+                    sort_by="cuda_time_total", row_limit=5
                 )
             )
 
@@ -326,8 +326,6 @@ class TestNerfInt(unittest.TestCase):
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
             with_stack=True,
             with_flops=True,
-            profile_memory=True,
-            record_shapes=True,
             on_trace_ready=trace_handler,
         ) as prof:
             with record_function("train_loop"):
