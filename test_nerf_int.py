@@ -303,6 +303,11 @@ class TestNerfInt(unittest.TestCase):
                     sort_by="cuda_time_total", row_limit=5
                 )
             )
+            print(
+                prof.key_averages(group_by_stack_n=5).table(
+                    sort_by="cpu_time_total", row_limit=5
+                )
+            )
 
         print("cuda acceleration available. Using cuda")
 
