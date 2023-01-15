@@ -242,7 +242,7 @@ def trace_ray(
         torch.min(
             torch.max(cum_expected_distance, t_near), t_far
         ),
-        torch.concat(stopping_probs, 1),
+        torch.stack(stopping_probs, 1),
     )
 
 def replace_alpha_with_solid_color(img, background_color):
