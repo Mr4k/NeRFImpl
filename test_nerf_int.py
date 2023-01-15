@@ -335,22 +335,21 @@ class TestNerfInt(unittest.TestCase):
             on_trace_ready=trace_handler,
         ) as prof:
             with record_function("train_loop"):
-                with torch.autograd.set_detect_anomaly(True):
-                    depth, colors, _ = render_rays(
-                        batch_size,
-                        camera_poses,
-                        rays,
-                        distance_to_depth_modifiers,
-                        near,
-                        far,
-                        coarse_network,
-                        fine_network,
-                        64,
-                        128,
-                        True,
-                        device,
-                        background_color,
-                    )
+                depth, colors, _ = render_rays(
+                    batch_size,
+                    camera_poses,
+                    rays,
+                    distance_to_depth_modifiers,
+                    near,
+                    far,
+                    coarse_network,
+                    fine_network,
+                    64,
+                    128,
+                    True,
+                    device,
+                    background_color,
+                )
             self.assertEqual(depth.shape, torch.Size([batch_size]))
             self.assertEqual(colors.shape, torch.Size([batch_size, 3]))
             prof.step()

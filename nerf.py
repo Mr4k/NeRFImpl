@@ -49,8 +49,8 @@ def compute_stratified_sample_points(device, batch_size, num_samples, t_near, t_
     """
     bin_width = t_far - t_near
     return (
-        torch.tensor(t_near).to(device).view(-1, 1).repeat(1, num_samples)
-        + bin_width.view(-1, 1)
+        t_near.reshape(-1, 1).repeat(1, num_samples)
+        + bin_width.reshape(-1, 1)
         * (
             torch.rand((batch_size, num_samples), device=device)
             + torch.arange(num_samples, device=device).repeat(batch_size, 1)
@@ -223,7 +223,7 @@ def trace_ray(
 
         stopping_probs[:, i] = cum_passthrough_prob * prob_hit_current_bin
 
-        cum_color += stopping_probs[:, i].view(-1, 1).repeat(1, 3) * colors[:, i]
+        cum_color += stopping_probs[:, i].reshape(-1, 1).repeat(1, 3) * colors[:, i]
 
         cum_expected_distance += stopping_probs[:, i] * distance_acc
 
@@ -233,7 +233,7 @@ def trace_ray(
     # add far plane
     cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
     cum_expected_distance += cum_passthrough_prob * t_far
-    cum_color += cum_passthrough_prob.view(-1, 1).matmul(background_color.view(1, 3))
+    cum_color += cum_passthrough_prob.reshape(-1, 1).matmul(background_color.view(1, 3))
 
     return (
         cum_color,
