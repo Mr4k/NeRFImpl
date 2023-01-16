@@ -301,12 +301,12 @@ class TestNerfInt(unittest.TestCase):
         def trace_handler(prof):
             print(
                 prof.key_averages(group_by_stack_n=5).table(
-                    sort_by="cuda_time_total", row_limit=5
+                    sort_by="cuda_time_total", row_limit=10
                 )
             )
             print(
                 prof.key_averages(group_by_stack_n=5).table(
-                    sort_by="cpu_time_total", row_limit=5
+                    sort_by="cpu_time_total", row_limit=10
                 )
             )
 
