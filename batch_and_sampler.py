@@ -81,8 +81,8 @@ def render_rays(
     device,
     background_color,
 ):
-    nears = torch.tensor(near).repeat(batch_size) / distance_to_depth_modifiers
-    fars = torch.tensor(far).repeat(batch_size) / distance_to_depth_modifiers
+    nears = torch.tensor(near, device=device).repeat(batch_size) / distance_to_depth_modifiers
+    fars = torch.tensor(far, device=device).repeat(batch_size) / distance_to_depth_modifiers
     fine_colors, fine_dist, coarse_colors = trace_hierarchical_ray(
         device,
         coarse_network,
