@@ -11,6 +11,7 @@ from batch_and_sampler import render_image, render_rays, sample_batch
 from nerf import load_config_file
 
 from neural_nerf import NerfModel
+from tiny_nerf import TinyNerfModel
 
 from torch.profiler import profile, record_function, ProfilerActivity
 
@@ -241,8 +242,8 @@ class TestNerfInt(unittest.TestCase):
         background_color = torch.tensor([0.0, 0.0, 0.0])
 
         fov, color_images, transformation_matricies = load_config_file("./integration_test_data", "views", background_color, False)
-        coarse_network = NerfModel(5.0, device)
-        fine_network = NerfModel(5.0, device)
+        coarse_network = TinyNerfModel(5.0, device)
+        fine_network = TinyNerfModel(5.0, device)
 
         camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
             batch_size,
@@ -286,8 +287,8 @@ class TestNerfInt(unittest.TestCase):
         background_color = torch.tensor([0.0, 0.0, 0.0])
 
         fov, color_images, transformation_matricies = load_config_file("./integration_test_data", "views", background_color, False)
-        coarse_network = NerfModel(5.0, device)
-        fine_network = NerfModel(5.0, device)
+        coarse_network = TinyNerfModel(5.0, device)
+        fine_network = TinyNerfModel(5.0, device)
 
         camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
             batch_size,
@@ -311,23 +312,23 @@ class TestNerfInt(unittest.TestCase):
 
         print("cuda acceleration available. Using cuda")
 
-        for _ in range(100):
-            with torch.autograd.set_detect_anomaly(True):
-                _, _, _ = render_rays(
-                    batch_size,
-                    camera_poses,
-                    rays,
-                    distance_to_depth_modifiers,
-                    near,
-                    far,
-                    coarse_network,
-                    fine_network,
-                    64,
-                    128,
-                    True,
-                    device,
-                    background_color,
-                )
+        for i in range(10):
+            print(f"warmup run {i}")
+            _, _, _ = render_rays(
+                batch_size,
+                camera_poses,
+                rays,
+                distance_to_depth_modifiers,
+                near,
+                far,
+                coarse_network,
+                fine_network,
+                64,
+                128,
+                True,
+                device,
+                background_color,
+            )
 
         with profile(
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],

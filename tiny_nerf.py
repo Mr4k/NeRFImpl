@@ -1,8 +1,8 @@
 import torch
 
-class NerfModel(torch.nn.Module):
+class TinyNerfModel(torch.nn.Module):
     def __init__(self, scale, device):
-        super(NerfModel, self).__init__()
+        super(TinyNerfModel, self).__init__()
         self.device = device
         self.to(device)
 
@@ -22,17 +22,8 @@ class NerfModel(torch.nn.Module):
             ).repeat_interleave(3),
         }
 
-        self.linear1 = torch.nn.Linear(pos_input_dims, 256)
-        self.linear2 = torch.nn.Linear(256, 256)
-        self.linear3 = torch.nn.Linear(256, 256)
-        self.linear4 = torch.nn.Linear(256, 256)
-        self.linear5 = torch.nn.Linear(256, 256)
-        self.linear6 = torch.nn.Linear(256 + pos_input_dims, 256)
-        self.linear7 = torch.nn.Linear(256, 256)
-        self.linear8 = torch.nn.Linear(256, 256)
-        self.linear9 = torch.nn.Linear(256, 256 + 1)
-        self.linear10 = torch.nn.Linear(256 + dir_input_dims, 128)
-        self.linear11 = torch.nn.Linear(128, 3)
+        self.linear1 = torch.nn.Linear(pos_input_dims, 128 + 1)
+        self.linear2 = torch.nn.Linear(128 + dir_input_dims, 3)
 
         self.relu_activation = torch.nn.ReLU()
         self.sigmoid_activation = torch.nn.Sigmoid()
@@ -50,27 +41,8 @@ class NerfModel(torch.nn.Module):
 
         x = self.linear1(pos_embedding)
         x = self.relu_activation(x)
-        x = self.linear2(x)
-        x = self.relu_activation(x)
-        x = self.linear3(x)
-        x = self.relu_activation(x)
-        x = self.linear4(x)
-        x = self.relu_activation(x)
-        x = self.linear5(x)
-        x = self.relu_activation(x)
-        x = self.linear6(torch.concat([x, pos_embedding], dim=1))
-        x = self.relu_activation(x)
-        x = self.linear7(x)
-        x = self.relu_activation(x)
-        x = self.linear8(x)
-        x = self.relu_activation(x)
-        x = self.linear9(x)
         density = self.relu_activation(x[:, 0])
         dir_input = self.embed_tensor(dir_input, self.l_dir)
-        x = self.linear10(torch.concat([x[:, 1:], dir_input], dim=1))
-        x = self.linear11(x)
+        x = self.linear2(torch.concat([x[:, 1:], dir_input], dim=1))
         color = self.sigmoid_activation(x)
-        batch_size = pos_input.shape[0]
-        color = torch.rand((batch_size, 3), device=self.device)
-        density = torch.rand(batch_size, device=self.device)
         return color, density
