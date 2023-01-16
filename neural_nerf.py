@@ -74,6 +74,6 @@ class NerfModel(torch.nn.Module):
         x = self.linear11(x)
         color = self.sigmoid_activation(x)"""
         batch_size = pos_input.shape[0]
-        color = torch.rand((batch_size, 3))
-        density = torch.rand(batch_size)
+        color = torch.rand((batch_size, 3), device=self.device)
+        density = torch.rand(batch_size, device=self.device)
         return color, density
