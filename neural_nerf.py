@@ -49,7 +49,7 @@ class NerfModel(torch.nn.Module):
         return torch.concat([sin_embeddings, cos_embeddings], dim=1)
 
     def forward(self, pos_input, dir_input):
-        pos_embedding = self.embed_tensor(pos_input / self.scale, self.l_pos)
+        """pos_embedding = self.embed_tensor(pos_input / self.scale, self.l_pos)
 
         x = self.linear1(pos_embedding)
         x = self.relu_activation(x)
@@ -72,5 +72,8 @@ class NerfModel(torch.nn.Module):
         dir_input = self.embed_tensor(dir_input, self.l_dir)
         x = self.linear10(torch.concat([x[:, 1:], dir_input], dim=1))
         x = self.linear11(x)
-        color = self.sigmoid_activation(x)
+        color = self.sigmoid_activation(x)"""
+        batch_size = pos_input.shape[0]
+        color = torch.rand((batch_size, 3))
+        density = torch.rand(batch_size)
         return color, density
