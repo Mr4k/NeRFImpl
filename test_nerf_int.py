@@ -281,8 +281,8 @@ class TestNerfInt(unittest.TestCase):
             self.skipTest("no cuda acceleration available")
 
         batch_size = 500
-        near = 0.5
-        far = 7
+        near = torch.tensor(0.5)
+        far = torch.tensor(7.0)
 
         background_color = torch.tensor([0.0, 0.0, 0.0])
 
@@ -297,6 +297,15 @@ class TestNerfInt(unittest.TestCase):
             color_images,
             fov,
         )
+
+        camera_poses = camera_poses.to(device)
+        rays = rays.to(device)
+        distance_to_depth_modifiers = distance_to_depth_modifiers.to(device)
+        near = near.to(device)
+        far = far.to(device)
+        coarse_network = coarse_network.to(device)
+        fine_network = fine_network.to(device)
+        background_color = background_color.to(device)
 
         def trace_handler(prof):
             print(

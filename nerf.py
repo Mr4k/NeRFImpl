@@ -108,14 +108,6 @@ def trace_hierarchical_ray(
         fine_expected_distance: Size (batch_size) tensor representing the expected distance to collision along each fine ray
         coarse_color: Size (batch_size) tensor representing the colors along each coarse ray
     """
-    coarse_radiance_field = coarse_radiance_field.to(device)
-    fine_radiance_field = fine_radiance_field.to(device)
-    positions = positions.to(device)
-    directions = directions.to(device)
-    t_near = t_near.to(device)
-    t_far = t_far.to(device)
-    background_color = background_color.to(device)
-
     batch_size = positions.shape[0]
 
     coarse_stratified_sample_times = compute_stratified_sample_points(
