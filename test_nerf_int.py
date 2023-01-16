@@ -281,8 +281,8 @@ class TestNerfInt(unittest.TestCase):
             self.skipTest("no cuda acceleration available")
 
         batch_size = 500
-        near = torch.tensor(0.5)
-        far = torch.tensor(7.0)
+        near = 0.5
+        far = 7.0
 
         background_color = torch.tensor([0.0, 0.0, 0.0])
 
