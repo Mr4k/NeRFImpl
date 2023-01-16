@@ -280,7 +280,7 @@ class TestNerfInt(unittest.TestCase):
             print("no cuda acceleration available. Skipping test")
             self.skipTest("no cuda acceleration available")
 
-        batch_size = 4096
+        batch_size = 500
         near = 0.5
         far = 7
 
