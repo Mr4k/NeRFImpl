@@ -260,6 +260,24 @@ class TestNerfInt(unittest.TestCase):
         fine_network = fine_network.to(device)
         background_color = background_color.to(device)
 
+        for i in range(10):
+            print(f"warmup run {i}")
+            _, _, _ = render_rays(
+                batch_size,
+                camera_poses,
+                rays,
+                distance_to_depth_modifiers,
+                near,
+                far,
+                coarse_network,
+                fine_network,
+                64,
+                128,
+                True,
+                device,
+                background_color,
+            )
+
         t0 = benchmark.Timer(
             stmt='render_rays(batch_size, camera_poses, rays, distance_to_depth_modifiers, near, far, coarse_network, fine_network, 64, 128, True, device, background_color)',
             setup='from batch_and_sampler import render_rays',
