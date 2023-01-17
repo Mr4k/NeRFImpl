@@ -253,6 +253,13 @@ class TestNerfInt(unittest.TestCase):
             fov,
         )
 
+        camera_poses = camera_poses.to(device)
+        rays = rays.to(device)
+        distance_to_depth_modifiers = distance_to_depth_modifiers.to(device)
+        coarse_network = coarse_network.to(device)
+        fine_network = fine_network.to(device)
+        background_color = background_color.to(device)
+
         t0 = benchmark.Timer(
             stmt='render_rays(batch_size, camera_poses, rays, distance_to_depth_modifiers, near, far, coarse_network, fine_network, 64, 128, True, device, background_color)',
             setup='from batch_and_sampler import render_rays',
