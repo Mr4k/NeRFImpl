@@ -192,8 +192,8 @@ def trace_ray(
         stratified_sample_points.reshape(-1, 3),
         directions.repeat_interleave(num_samples + 1, dim=0),
     )
-    colors = colors.reshape(batch_size, num_samples + 1, 3)
-    opacity = opacity.reshape(batch_size, num_samples + 1)
+    colors = colors.reshape(batch_size, num_samples + 1, 3)[:, 0:-1]
+    opacity = opacity.reshape(batch_size, num_samples + 1)#[:, 0:-1]
 
     cum_partial_passthrough_sum = torch.zeros(batch_size, device=device)
 
@@ -203,28 +203,24 @@ def trace_ray(
     stopping_probs = torch.zeros((batch_size, num_samples), device=device)
     cum_color = torch.zeros((batch_size, 3), device=device)
     cum_expected_distance = torch.zeros(batch_size, device=device)
-    distance_acc = torch.ones(batch_size, device=device) * t_near
 
-    # TODO (getting rid of this for loop likely speeds up rendering)
-    # on second thought maybe not, bottleneck will eventually likely be get_network_output
-    for i in range(num_samples):
-        delta = stratified_sample_times[:, i + 1] - stratified_sample_times[:, i]
-        prob_hit_current_bin = 1 - torch.exp(-opacity[:, i] * delta)
-        cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
+    delta = stratified_sample_times[:, 1:] - stratified_sample_times[:, :-1]
+    delta_opacity = delta * opacity[:, :-1]
+    prob_hit_current_bin = 1 - torch.exp(-delta_opacity)
+    cum_partial_passthrough_sum = torch.concat([torch.zeros(batch_size, 1), torch.cumsum(delta_opacity, dim=1)], dim=1)
+    cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
 
-        stopping_probs[:, i] = cum_passthrough_prob * prob_hit_current_bin
-
-        cum_color = cum_color + stopping_probs[:, i].reshape(-1, 1).repeat(1, 3) * colors[:, i]
-
-        cum_expected_distance = cum_expected_distance + stopping_probs[:, i] * distance_acc
-
-        cum_partial_passthrough_sum = cum_partial_passthrough_sum + opacity[:, i] * delta
-        distance_acc = distance_acc + delta
+    stopping_probs = cum_passthrough_prob[:, :-1] * prob_hit_current_bin
+    cum_color[:, 0] = torch.sum(stopping_probs * colors[:, :, 0], dim=1)
+    cum_color[:, 1] = torch.sum(stopping_probs * colors[:, :, 1], dim=1)
+    cum_color[:, 2] = torch.sum(stopping_probs * colors[:, :, 2], dim=1)
+    cum_distance = stratified_sample_times[:, :-1]
+    cum_expected_distance = torch.sum(stopping_probs * cum_distance, dim=1)
 
     # add far plane
-    cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
-    cum_expected_distance = cum_expected_distance + cum_passthrough_prob * t_far
-    cum_color = cum_color + cum_passthrough_prob.reshape(-1, 1).matmul(background_color.reshape(1, 3))
+    far_plane_impact_prob = torch.exp(-cum_partial_passthrough_sum[:, -1])
+    cum_expected_distance = cum_expected_distance + far_plane_impact_prob * t_far
+    cum_color = cum_color + far_plane_impact_prob.reshape(-1, 1).matmul(background_color.reshape(1, 3))
 
     return (
         cum_color,
