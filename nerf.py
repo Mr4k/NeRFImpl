@@ -207,7 +207,7 @@ def trace_ray(
     delta = stratified_sample_times[:, 1:] - stratified_sample_times[:, :-1]
     delta_opacity = delta * opacity[:, :-1]
     prob_hit_current_bin = 1 - torch.exp(-delta_opacity)
-    cum_partial_passthrough_sum = torch.concat([torch.zeros(batch_size, 1), torch.cumsum(delta_opacity, dim=1)], dim=1, device=device)
+    cum_partial_passthrough_sum = torch.concat([torch.zeros(batch_size, 1, device=device), torch.cumsum(delta_opacity, dim=1)], dim=1)
     cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
 
     stopping_probs = cum_passthrough_prob[:, :-1] * prob_hit_current_bin
