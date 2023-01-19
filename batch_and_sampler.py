@@ -98,7 +98,7 @@ def render_rays(
     )
     depth = fine_dist * distance_to_depth_modifiers
 
-    return depth.cpu(), fine_colors.cpu(), coarse_colors.cpu()
+    return depth, fine_colors, coarse_colors
 
 
 def random_partition(num_catagories, num_draws):
