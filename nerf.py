@@ -132,7 +132,7 @@ def trace_hierarchical_ray(
 
     unsorted_fine_sample_times = inverse_transform_sample_times
     num_final_fine_sample_points = num_fine_sample_points - 1
-    if add_coarse_sample_to_fine_samples and False:
+    if add_coarse_sample_to_fine_samples:
         unsorted_fine_sample_times = torch.concat(
             [coarse_stratified_sample_times, inverse_transform_sample_times], dim=1
         )
