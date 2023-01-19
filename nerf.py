@@ -133,9 +133,10 @@ def trace_hierarchical_ray(
     unsorted_fine_sample_times = inverse_transform_sample_times
     num_final_fine_sample_points = num_fine_sample_points
     if add_coarse_sample_to_fine_samples:
-        unsorted_fine_sample_times = torch.concat(
-            [coarse_stratified_sample_times, inverse_transform_sample_times], dim=1
-        )
+        #unsorted_fine_sample_times = torch.concat(
+        #    [coarse_stratified_sample_times, inverse_transform_sample_times], dim=1
+        #)
+        unsorted_fine_sample_times = inverse_transform_sample_times
         num_final_fine_sample_points = num_coarse_sample_points + num_fine_sample_points
     
     fine_sample_times, _ = torch.sort(
@@ -211,12 +212,10 @@ def trace_ray(
     delta = stratified_sample_times[:, 1:] - stratified_sample_times[:, :-1]
     delta_opacity = delta * opacity[:, :-1]
     prob_hit_current_bin = 1 - torch.exp(-delta_opacity)
-    #cum_partial_passthrough_sum = torch.concat([torch.zeros(batch_size, 1, device=device), torch.cumsum(delta_opacity, dim=1)], dim=1)
-    cum_partial_passthrough_sum = torch.cumsum(delta_opacity, dim=1)
+    cum_partial_passthrough_sum = torch.concat([torch.zeros(batch_size, 1, device=device), torch.cumsum(delta_opacity, dim=1)], dim=1)
     cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
 
-    #stopping_probs = cum_passthrough_prob[:, :-1] * prob_hit_current_bin
-    stopping_probs = cum_passthrough_prob[:, :] * prob_hit_current_bin
+    stopping_probs = cum_passthrough_prob[:, :-1] * prob_hit_current_bin
     cum_color[:, 0] = torch.sum(stopping_probs * colors[:, :, 0], dim=1)
     cum_color[:, 1] = torch.sum(stopping_probs * colors[:, :, 1], dim=1)
     cum_color[:, 2] = torch.sum(stopping_probs * colors[:, :, 2], dim=1)
