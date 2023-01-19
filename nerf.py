@@ -20,6 +20,7 @@ def inverse_transform_sampling(device, stopping_probs, bin_boundary_points, num_
     batch_size, _ = stopping_probs.shape
     epsilon = 0.00001
     sample_bins = torch.multinomial(stopping_probs + epsilon, num_samples, True)
+    # really repeat intervleave (num_samples)
     indexes = torch.arange(0, batch_size, 1, device=device).repeat(1, num_samples)
     flatten_samples = sample_bins.flatten()
     return (
@@ -192,7 +193,8 @@ def trace_ray(
     colors, opacity = radiance_field_output(
         radiance_field,
         stratified_sample_points.reshape(-1, 3),
-        directions.repeat_interleave(num_samples + 1, dim=0),
+        #directions.repeat_interleave(num_samples + 1, dim=0),
+        directions.repeat(1, num_samples + 1),
     )
     colors = colors.reshape(batch_size, num_samples + 1, 3)[:, 0:-1]
     opacity = opacity.reshape(batch_size, num_samples + 1)#[:, 0:-1]
