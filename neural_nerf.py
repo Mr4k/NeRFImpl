@@ -1,6 +1,5 @@
 import torch
 
-@torch.jit.script
 class NerfModel(torch.nn.Module):
     def __init__(self, scale, device):
         super(NerfModel, self).__init__()
