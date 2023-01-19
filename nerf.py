@@ -215,7 +215,8 @@ def trace_ray(
     cum_partial_passthrough_sum = torch.cumsum(delta_opacity, dim=1)
     cum_passthrough_prob = torch.exp(-cum_partial_passthrough_sum)
 
-    stopping_probs = cum_passthrough_prob[:, :-1] * prob_hit_current_bin
+    #stopping_probs = cum_passthrough_prob[:, :-1] * prob_hit_current_bin
+    stopping_probs = cum_passthrough_prob[:, :] * prob_hit_current_bin
     cum_color[:, 0] = torch.sum(stopping_probs * colors[:, :, 0], dim=1)
     cum_color[:, 1] = torch.sum(stopping_probs * colors[:, :, 1], dim=1)
     cum_color[:, 2] = torch.sum(stopping_probs * colors[:, :, 2], dim=1)
