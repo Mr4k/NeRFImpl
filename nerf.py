@@ -192,7 +192,7 @@ def trace_ray(
     colors, opacity = radiance_field_output(
         radiance_field,
         stratified_sample_points.reshape(-1, 3),
-        directions.repeat(batch_size * num_samples + 1),
+        directions.repeat(num_samples + 1, 1),
     )
     colors = colors.reshape(batch_size, num_samples + 1, 3)[:, 0:-1]
     opacity = opacity.reshape(batch_size, num_samples + 1)#[:, 0:-1]
