@@ -157,6 +157,7 @@ def trace_hierarchical_ray(
 
     return fine_color, fine_distance, coarse_color
 
+@torch.jit.script
 def trace_ray(
     device, num_samples, stratified_sample_times, radiance_field, origins, directions, t_near, t_far, background_color
 ):
