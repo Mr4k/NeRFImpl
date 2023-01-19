@@ -59,7 +59,7 @@ def compute_stratified_sample_points(device, batch_size, num_samples, t_near, t_
         / num_samples
     )
 
-
+@torch.jit.script
 def radiance_field_output(network, points, dirs):
     """
     Evaluates a radiance field represented by a neural network
