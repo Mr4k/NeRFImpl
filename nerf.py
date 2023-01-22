@@ -21,8 +21,8 @@ def inverse_transform_sampling(device, stopping_probs, bin_boundary_points, num_
     epsilon = 0.00001
     sample_bins = torch.multinomial(stopping_probs + epsilon, num_samples, True)
     # really repeat intervleave (num_samples)
-    #indexes = torch.arange(0, batch_size, 1, device=device).repeat_interleave(num_samples)
-    indexes = torch.arange(0, batch_size, 1, device=device).repeat(1, num_samples)
+    indexes = torch.arange(0, batch_size, 1, device=device).repeat_interleave(num_samples)
+    #indexes = torch.arange(0, batch_size, 1, device=device).repeat(1, num_samples)
     flatten_samples = sample_bins.flatten()
     return (
         (
@@ -188,8 +188,6 @@ def trace_ray(
         + origins.reshape(batch_size, 1, -1).repeat(1, num_samples + 1, 1)
     )
 
-    # (batch_size, t, 3)
-    # (batch_size * t)
     colors, opacity = radiance_field_output(
         radiance_field,
         stratified_sample_points.reshape(-1, 3),
@@ -198,12 +196,9 @@ def trace_ray(
     colors = colors.reshape(batch_size, num_samples + 1, 3)[:, 0:-1]
     opacity = opacity.reshape(batch_size, num_samples + 1)#[:, 0:-1]
 
-    cum_partial_passthrough_sum = torch.zeros(batch_size, device=device)
-
     # a tensor that gives the probablity of the ray terminating in the nth bin
     # note this is really only need for the course network
     # might want to refactor the code so it can be disabled for the fine network
-    stopping_probs = torch.empty((batch_size, num_samples), device=device)
     cum_color = torch.empty((batch_size, 3), device=device)
     cum_expected_distance = torch.empty(batch_size, device=device)
 

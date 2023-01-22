@@ -81,10 +81,15 @@ def train(args):
             background_color.to(device),
         )
 
+        a = torch.tensor(0)
+        print("c:", a.requires_grad)
+
         expected_colors = expected_colors.to(device)
         loss = loss_fn(colors.flatten(), expected_colors.flatten()) + loss_fn(
             coarse_colors.flatten(), expected_colors.flatten()
         )
+        print("loss item:", loss.item(), loss.requires_grad)
+        loss.requires_grad = True
         loss.backward()
 
         optimizer.step()
