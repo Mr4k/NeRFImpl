@@ -42,9 +42,9 @@ def render_image(
         num_rays = ray_batch.shape[0]
         fine_depths, fine_colors, coarse_colors = render_rays(
             num_rays,
-            camera_pos_batch,
-            ray_batch,
-            ddm_batch,
+            camera_pos_batch.to(device),
+            ray_batch.to(device),
+            ddm_batch.to(device),
             near,
             far,
             coarse_network,
@@ -53,7 +53,7 @@ def render_image(
             fine_samples,
             add_coarse_sample_to_fine_samples,
             device,
-            background_color,
+            background_color.to(device),
         )
         batch_fine_depths.append(fine_depths)
         batch_fine_colors.append(fine_colors)

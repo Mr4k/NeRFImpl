@@ -67,9 +67,9 @@ def train(args):
 
         _, colors, coarse_colors = render_rays(
             batch_size,
-            camera_poses,
-            rays,
-            distance_to_depth_modifiers,
+            camera_poses.to(device),
+            rays.to(device),
+            distance_to_depth_modifiers.to(device),
             near,
             far,
             coarse_model,
@@ -78,7 +78,7 @@ def train(args):
             args.fine_samples,
             args.add_course_samples_to_fine_samples,
             device,
-            background_color,
+            background_color.to(device),
         )
 
         loss = loss_fn(colors.flatten(), expected_colors.flatten()) + loss_fn(
