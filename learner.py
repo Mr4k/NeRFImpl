@@ -81,6 +81,7 @@ def train(args):
             background_color.to(device),
         )
 
+        expected_colors = expected_colors.to(device)
         loss = loss_fn(colors.flatten(), expected_colors.flatten()) + loss_fn(
             coarse_colors.flatten(), expected_colors.flatten()
         )
