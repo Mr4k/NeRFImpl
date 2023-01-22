@@ -194,7 +194,6 @@ def trace_ray(
         radiance_field,
         stratified_sample_points.reshape(-1, 3),
         directions.repeat(1, num_samples + 1, 1).reshape(-1, 3),
-        #directions.repeat(num_samples + 1, 1),
     )
     colors = colors.reshape(batch_size, num_samples + 1, 3)[:, 0:-1]
     opacity = opacity.reshape(batch_size, num_samples + 1)#[:, 0:-1]
@@ -204,9 +203,9 @@ def trace_ray(
     # a tensor that gives the probablity of the ray terminating in the nth bin
     # note this is really only need for the course network
     # might want to refactor the code so it can be disabled for the fine network
-    stopping_probs = torch.zeros((batch_size, num_samples), device=device)
-    cum_color = torch.zeros((batch_size, 3), device=device)
-    cum_expected_distance = torch.zeros(batch_size, device=device)
+    stopping_probs = torch.empty((batch_size, num_samples), device=device)
+    cum_color = torch.empty((batch_size, 3), device=device)
+    cum_expected_distance = torch.empty(batch_size, device=device)
 
     delta = stratified_sample_times[:, 1:] - stratified_sample_times[:, :-1]
     delta_opacity = delta * opacity[:, :-1]

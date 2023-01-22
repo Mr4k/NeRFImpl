@@ -2,7 +2,6 @@ import unittest
 import torch
 import torch.utils.benchmark as benchmark
 
-import imageio.v3 as iio
 import imageio
 
 import os
@@ -242,8 +241,8 @@ class TestNerfInt(unittest.TestCase):
         background_color = torch.tensor([0.0, 0.0, 0.0])
 
         fov, color_images, transformation_matricies = load_config_file("./integration_test_data", "views", background_color, False)
-        coarse_network = TinyNerfModel(5.0, device)
-        fine_network = TinyNerfModel(5.0, device)
+        coarse_network = NerfModel(5.0, device)
+        fine_network = NerfModel(5.0, device)
 
         camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
             batch_size,
@@ -259,24 +258,6 @@ class TestNerfInt(unittest.TestCase):
         coarse_network = coarse_network.to(device)
         fine_network = fine_network.to(device)
         background_color = background_color.to(device)
-
-        for i in range(10):
-            print(f"warmup run {i}")
-            _, _, _ = render_rays(
-                batch_size,
-                camera_poses,
-                rays,
-                distance_to_depth_modifiers,
-                near,
-                far,
-                coarse_network,
-                fine_network,
-                64,
-                128,
-                True,
-                device,
-                background_color,
-            )
 
         t0 = benchmark.Timer(
             stmt='render_rays(batch_size, camera_poses, rays, distance_to_depth_modifiers, near, far, coarse_network, fine_network, 64, 128, True, device, background_color)',
@@ -312,8 +293,8 @@ class TestNerfInt(unittest.TestCase):
         background_color = torch.tensor([0.0, 0.0, 0.0])
 
         fov, color_images, transformation_matricies = load_config_file("./integration_test_data", "views", background_color, False)
-        coarse_network = TinyNerfModel(5.0, device)
-        fine_network = TinyNerfModel(5.0, device)
+        coarse_network = NerfModel(5.0, device)
+        fine_network = NerfModel(5.0, device)
 
         camera_poses, rays, distance_to_depth_modifiers, _ = sample_batch(
             batch_size,

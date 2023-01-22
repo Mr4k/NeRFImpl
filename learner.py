@@ -237,9 +237,11 @@ if __name__ == "__main__":
         default="0,0,0",
     )
     args = parser.parse_args()
+
     colors = args.background_color.split(",")
     if len(colors) != 3:
         raise Exception("expected 3 colors for --background_color")
     colors = [float(int(c)) / 255.0 for c in colors]
     args.background_color = colors
+    
     train(args)
